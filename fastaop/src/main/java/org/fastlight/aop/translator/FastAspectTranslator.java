@@ -13,7 +13,6 @@ import org.fastlight.aop.annotation.FastAspectVar;
 import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.apt.model.MetaMethod;
-import org.fastlight.apt.model.compile.MethodCompile;
 import org.fastlight.apt.translator.BaseFastTranslator;
 
 import javax.annotation.processing.Messager;
