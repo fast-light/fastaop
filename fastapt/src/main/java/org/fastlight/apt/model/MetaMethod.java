@@ -1,5 +1,6 @@
 package org.fastlight.apt.model;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.fastlight.apt.handler.FastAspectHandler;
 import org.fastlight.apt.handler.FastAspectHandlerBuilder;
@@ -7,6 +8,7 @@ import org.fastlight.apt.handler.FastAspectHandlerBuilder;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -43,7 +45,7 @@ public class MetaMethod {
     /**
      * 方法所在类的元数据
      */
-    private MetaClass owner;
+    private MetaClass ownerType;
 
     /**
      * 方法参数
@@ -66,6 +68,11 @@ public class MetaMethod {
      */
     private transient Method method;
 
+    /**
+     * 全局元数据缓存
+     */
+    private Map<String, Object> metaExtensions = Maps.newHashMap();
+
     public int getCacheIndex() {
         return cacheIndex;
     }
@@ -86,8 +93,8 @@ public class MetaMethod {
         return returnType;
     }
 
-    public MetaClass getOwner() {
-        return owner;
+    public MetaClass getOwnerType() {
+        return ownerType;
     }
 
     public MetaParameter[] getParameters() {
@@ -110,7 +117,7 @@ public class MetaMethod {
     public Method getMethod() {
         if (method == null) {
             method = MethodUtils.getMatchingMethod(
-                    owner.getType(),
+                    ownerType.getType(),
                     name,
                     Arrays.stream(parameters).map(MetaParameter::getType).toArray(Class<?>[]::new)
             );
@@ -118,7 +125,7 @@ public class MetaMethod {
         // 有泛型的情况，可能会出现匹配不到，这里只要方法名，方法参数个数，[方法参数名] 相等的唯一匹配即可
         // 因为有泛型，所以就不匹配类型了
         if (method == null) {
-            List<Method> methodList = Arrays.stream(owner.getType().getDeclaredMethods())
+            List<Method> methodList = Arrays.stream(ownerType.getType().getDeclaredMethods())
                     .filter(v -> name.equals(v.getName()))
                     .filter(v -> v.getParameterCount() == parameters.length)
                     .filter(v -> {
@@ -136,5 +143,14 @@ public class MetaMethod {
         }
 
         return method;
+    }
+
+    public void addMetaExtension(String key, Object value) {
+        metaExtensions.put(key, value);
+    }
+
+    public <T> T getMetaExtension(String key) {
+        //noinspection unchecked
+        return (T) metaExtensions.get(key);
     }
 }
