@@ -1,7 +1,6 @@
-package org.fastlight.apt.translator;
+package org.fastlight.aop.translator;
 
 import com.sun.tools.javac.code.Flags;
-import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
@@ -10,12 +9,13 @@ import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name.Table;
-import org.fastlight.apt.annotation.FastAspectVar;
-import org.fastlight.apt.handler.FastAspectHandler;
-import org.fastlight.apt.model.*;
+import org.fastlight.aop.annotation.FastAspectVar;
+import org.fastlight.aop.handler.FastAspectHandler;
+import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.model.compile.MethodCompile;
+import org.fastlight.apt.translator.BaseFastTranslator;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
@@ -27,7 +27,6 @@ import java.util.Optional;
  **/
 @SuppressWarnings("unchecked")
 public class FastAspectTranslator extends BaseFastTranslator {
-
     public static final String CONTEXT_VAR = "__fast_context";
 
     public static final String HANDLER_VAR = "__fast_handler";
@@ -38,19 +37,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
 
     public static final String META_CACHE_VAR = "__fast_meta_cache";
 
-    protected MethodCompile ctxCompile;
-
     /**
      * 父元素下面的静态缓存变量
      */
     private JCVariableDecl metaCacheVar = null;
 
-    /**
-     * 初始化注入需要的参数
-     */
-    public void init(MethodCompile context) {
-        this.ctxCompile = context;
-    }
 
     /**
      * 初始化注入相关元素
@@ -151,7 +142,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
         super.visitVarDef(jcVariableDecl);
         // 对于用了 ZeusMethodContext.currentContext()
         // 或者 @ZeusMethodContextVar 的变量统统进行替换
-        if (jcVariableDecl.toString().contains("ZeusMethodContext")
+        if (jcVariableDecl.toString().contains("FastAspectContext")
                 && ((jcVariableDecl.init != null
                 && jcVariableDecl.init.toString().contains("FastAspectContext.currentContext()"))
                 || jcVariableDecl.toString().contains(FastAspectVar.class.getSimpleName())
@@ -163,7 +154,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
     /**
      * 处理包装 return，回调 handler 接口
      *
-     * @see org.fastlight.apt.handler.FastAspectHandler#returnWrapper(FastAspectContext, Object)
+     * @see org.fastlight.aop.handler.FastAspectHandler#returnWrapper(FastAspectContext, Object)
      */
     @Override
     public void visitReturn(JCReturn jcReturn) {
@@ -212,7 +203,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
      * }
      * </example>
      * @formatter:on
-     * @see org.fastlight.apt.handler.FastAspectHandler#errorHandle(FastAspectContext, Throwable)
+     * @see org.fastlight.aop.handler.FastAspectHandler#errorHandle(FastAspectContext, Throwable)
      * @see FastAspectContext#isFastReturn()
      */
     protected JCStatement errorHandleStatement(JCVariableDecl handleVar) {
@@ -282,7 +273,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
      * }
      * </example>
      * @formatter:on
-     * @see org.fastlight.apt.handler.FastAspectHandler#preHandle(FastAspectContext)
+     * @see org.fastlight.aop.handler.FastAspectHandler#preHandle(FastAspectContext)
      * @see FastAspectContext#isFastReturn()
      * @see FastAspectContext#getReturnVal()
      */
@@ -341,7 +332,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * @see org.fastlight.apt.handler.FastAspectHandler#postHandle(FastAspectContext)
+     * @see org.fastlight.aop.handler.FastAspectHandler#postHandle(FastAspectContext)
      */
     protected JCStatement postHandleStatement(JCVariableDecl handleVar) {
         return treeMaker.If(
@@ -373,34 +364,6 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * @see MetaMethod#getBuilder()
-     */
-    protected JCExpression builderExpression() {
-        return treeMaker.ClassLiteral(ctxCompile.getBuilder());
-    }
-
-    /**
-     * @see MetaMethod#getReturnType()
-     */
-    protected JCExpression returnTypeExpression() {
-        return classLiteral(ctxCompile.getReturnType());
-    }
-
-    /**
-     * @see MetaMethod#getAnnotations()
-     */
-    protected JCExpression methodAnnotationsExpression() {
-        return createAnnotationArrayExpression(ctxCompile.getMethodElement().getAnnotationMirrors());
-    }
-
-    /**
-     * @see MetaMethod#getParameters()
-     */
-    protected JCExpression paramsExpression() {
-        return paramsExpression((List<VarSymbol>) ctxCompile.getMethodElement().getParameters());
-    }
-
-    /**
      * 将当前 method 的元元数据进行缓存
      */
     protected Integer addMetaCache() {
@@ -413,47 +376,6 @@ public class FastAspectTranslator extends BaseFastTranslator {
         return newElements.size() - 1;
     }
 
-
-    /**
-     * @see FastAspectContext#getOwner()
-     */
-    @CheckForNull
-    protected JCExpression ownerExpression() {
-        if (ctxCompile.getMethodElement().getModifiers().contains(Modifier.STATIC)) {
-            return treeMaker.Literal(TypeTag.BOT, null);
-        }
-        return treeMaker.Ident(getNameFromString("this"));
-    }
-
-    /**
-     * @see org.fastlight.apt.model.MetaClass#create(Object, MetaAnnotation[])
-     */
-    protected JCExpression metaOwnerExpression() {
-        JCExpression ownerType = classLiteral(ctxCompile.getOwnerElement().type);
-        JCExpression annotations = createAnnotationArrayExpression(ctxCompile.getOwnerElement().getAnnotationMirrors());
-        return treeMaker.Apply(
-                List.nil(),
-                memberAccess(getCreateMethod(MetaClass.class)),
-                List.of(ownerType, annotations)
-        );
-    }
-
-    /**
-     * @see MetaMethod#isStatic()
-     */
-    protected JCExpression isStaticExpression() {
-        if (ctxCompile.getMethodElement().getModifiers().contains(Modifier.STATIC)) {
-            return treeMaker.Literal(true);
-        }
-        return treeMaker.Literal(false);
-    }
-
-    /**
-     * @see MetaMethod#getName()
-     */
-    protected JCExpression methodNameExpression() {
-        return treeMaker.Literal(ctxCompile.getMethodDecl().name.toString());
-    }
 
     /**
      * @see FastAspectContext#create(MetaMethod, Object, Object[])
@@ -473,29 +395,25 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * @see MetaMethod#create(Integer, boolean, String, MetaClass, MetaParameter[], Object, Class, MetaAnnotation[])
+     * 将 builder class 作为 metaExtension 传入
      */
-    protected JCExpression newMetaExpression(Integer cacheIndex) {
+    @Override
+    protected JCExpression metaExtensionExpression() {
         return treeMaker.Apply(
                 List.nil(),
-                memberAccess(getCreateMethod(MetaMethod.class)),
-                List.of(treeMaker.Literal(cacheIndex),
-                        isStaticExpression(),
-                        methodNameExpression(),
-                        metaOwnerExpression(),
-                        paramsExpression(),
-                        returnTypeExpression(),
-                        builderExpression(),
-                        methodAnnotationsExpression()
-                )
+                newMapMethod,
+                List.of(treeMaker.Literal(FastAspectContext.EXT_META_BUILDER_CLASS), builderExpression())
         );
     }
 
+
     /**
-     * 获取 xxx.create 方法
+     * @see MetaMethod#getMetaExtension(String)
      */
-    protected String getCreateMethod(Class<?> cls) {
-        return cls.getName() + ".create";
+    protected JCExpression builderExpression() {
+        Type builder = ctxCompile.getExtension("builder");
+        return treeMaker.ClassLiteral(builder);
     }
+
 
 }

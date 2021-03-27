@@ -10,8 +10,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>fastcore</artifactId>
-    <version>${fast.version}</version>
+    <artifactId>fastaop</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -19,22 +18,9 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
+            <groupId>org.fastlight</groupId>
+            <artifactId>fastapt</artifactId>
         </dependency>
     </dependencies>
-
 
 </project>

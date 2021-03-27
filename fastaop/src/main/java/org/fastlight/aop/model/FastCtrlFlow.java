@@ -1,4 +1,4 @@
-package org.fastlight.apt.model;
+package org.fastlight.aop.model;
 
 /**
  * 控制程序流程

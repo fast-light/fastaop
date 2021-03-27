@@ -1,7 +1,9 @@
-package org.fastlight.apt.model;
+package org.fastlight.aop.model;
 
 import com.google.common.collect.Maps;
-import org.fastlight.apt.handler.FastAspectHandler;
+import org.fastlight.aop.handler.FastAspectHandler;
+import org.fastlight.aop.handler.FastAspectHandlerBuilder;
+import org.fastlight.apt.model.MetaMethod;
 
 import javax.annotation.CheckForNull;
 import java.util.Map;
@@ -12,6 +14,16 @@ import java.util.Map;
  */
 @SuppressWarnings("unchecked")
 public class FastAspectContext {
+    /**
+     * 缓存扩展 key
+     */
+    public static final String EXT_META_BUILDER_CLASS = "fast.meta_handler_builder_class";
+    public static final String EXT_META_HANDLER = "fast.meta_handler";
+    /**
+     * 构造 handler 的时候需要线程安全
+     */
+    public static final Object HANDLER_LOCKER = new Object();
+
     /**
      * 方法元数据
      */
@@ -73,11 +85,25 @@ public class FastAspectContext {
     }
 
     /**
-     * 构造一个 Handler
+     * 构造一个 Handler，线程安全的，通过缓存来优化性能
      */
     public FastAspectHandler buildHandler() {
         try {
-            return getMetaMethod().buildHandler();
+            FastAspectHandler handler = getMetaExtension(EXT_META_HANDLER);
+            if (handler != null) {
+                return handler;
+            }
+            synchronized (HANDLER_LOCKER) {
+                handler = getMetaExtension(EXT_META_HANDLER);
+                if (handler != null) {
+                    return handler;
+                }
+                Class<FastAspectHandlerBuilder> builderClass = getMetaExtension(EXT_META_BUILDER_CLASS);
+                FastAspectHandlerBuilder builder = builderClass.newInstance();
+                handler = builder.build();
+                addMetaExtension(EXT_META_HANDLER, handler);
+                return handler;
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

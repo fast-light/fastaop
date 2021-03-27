@@ -1,10 +1,11 @@
-package org.fastlight.apt.processor;
+package org.fastlight.aop.processor;
 
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
-import org.fastlight.apt.annotation.FastAspect;
+import org.fastlight.aop.annotation.FastAspect;
+import org.fastlight.aop.translator.FastAspectTranslator;
 import org.fastlight.apt.model.compile.MethodCompile;
-import org.fastlight.apt.translator.FastAspectTranslator;
+import org.fastlight.apt.processor.BaseFastProcessor;
 
 import javax.annotation.Nullable;
 import javax.lang.model.element.AnnotationMirror;
@@ -18,7 +19,7 @@ import java.util.Optional;
  */
 public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
     @Override
-    protected void processExecutableElement(ExecutableElement executableElement, @Nullable AnnotationMirror atm) {
+    public void processExecutableElement(ExecutableElement executableElement, @Nullable AnnotationMirror atm) {
         if (atm == null) {
             return;
         }
@@ -38,7 +39,8 @@ public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
         MethodCompile methodCompile = new MethodCompile();
         methodCompile.setMethodDecl(jcMethodDecl);
         methodCompile.setOwnerElement(ownerElement);
-        methodCompile.setBuilder(getAtValueData(atm, "builder"));
+        methodCompile.addExtension("builder", getAtValueData(atm, "builder"));
+        methodCompile.setMethodElement(executableElement);
         FastAspectTranslator translator = getTranslator(methodCompile);
         // 1. 父类元素添加静态缓存变量
         translator.addCacheVar(javacTrees.getTree(ownerElement));
@@ -60,7 +62,7 @@ public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
     }
 
     @Override
-    protected void processTypeElement(TypeElement typeElement, @Nullable AnnotationMirror atm) {
+    public void processTypeElement(TypeElement typeElement, @Nullable AnnotationMirror atm) {
         processExecutableOfTypeElement(typeElement, atm, false);
     }
 }

@@ -2,8 +2,6 @@ package org.fastlight.apt.model;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.fastlight.apt.handler.FastAspectHandler;
-import org.fastlight.apt.handler.FastAspectHandlerBuilder;
 import org.fastlight.core.util.ReflectUtils;
 
 import java.lang.reflect.Method;
@@ -24,10 +22,7 @@ public class MetaMethod {
      * 该元素在静态 meta_cache 的缓存索引
      */
     private int cacheIndex;
-    /**
-     * 切面执行器实例
-     */
-    private FastAspectHandler handler;
+
     /**
      * 是否为静态方法
      */
@@ -60,11 +55,6 @@ public class MetaMethod {
 
 
     /**
-     * handler 的构造器
-     */
-    private Class<? extends FastAspectHandlerBuilder> builder;
-
-    /**
      * 返回获取当前方法对象，懒汉模式
      */
     private transient Method method;
@@ -79,8 +69,8 @@ public class MetaMethod {
             MetaClass metaOwner,
             MetaParameter[] parameters,
             Object returnType,
-            Class<? extends FastAspectHandlerBuilder> builder,
-            MetaAnnotation[] annotations
+            MetaAnnotation[] annotations,
+            Map<String, Object> metaExtension
     ) {
         MetaMethod metaMethod = new MetaMethod();
         metaMethod.cacheIndex = cacheIndex;
@@ -93,29 +83,11 @@ public class MetaMethod {
         } else {
             metaMethod.returnType = ReflectUtils.forNameCache(returnType.toString());
         }
-        metaMethod.builder = builder;
         metaMethod.annotations = annotations;
+        if (metaExtension != null && metaExtension.size() > 0) {
+            metaMethod.metaExtensions.putAll(metaExtension);
+        }
         return metaMethod;
-    }
-
-    /**
-     * 缓存执行器
-     */
-    public static Map<Class<?>, FastAspectHandler> HANDLER_MAP = Maps.newHashMap();
-
-    /**
-     * 构造执行器
-     */
-    public FastAspectHandler buildHandler() throws IllegalAccessException, InstantiationException {
-        if (this.handler != null) {
-            return this.handler;
-        }
-        FastAspectHandler buildHandler = HANDLER_MAP.get(builder);
-        if (buildHandler == null) {
-            buildHandler = builder.newInstance().build();
-        }
-        this.handler = buildHandler;
-        return buildHandler;
     }
 
     /**
@@ -127,9 +99,6 @@ public class MetaMethod {
         return cacheIndex;
     }
 
-    public FastAspectHandler getHandler() {
-        return handler;
-    }
 
     public boolean isStatic() {
         return isStatic;
@@ -153,10 +122,6 @@ public class MetaMethod {
 
     public MetaAnnotation[] getAnnotations() {
         return annotations;
-    }
-
-    public Class<? extends FastAspectHandlerBuilder> getBuilder() {
-        return builder;
     }
 
     /**

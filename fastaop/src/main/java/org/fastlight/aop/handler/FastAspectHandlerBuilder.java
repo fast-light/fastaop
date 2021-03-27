@@ -1,4 +1,4 @@
-package org.fastlight.apt.handler;
+package org.fastlight.aop.handler;
 
 /**
  * FastAspect 直接调用的 Handler，系统会生成单例模式

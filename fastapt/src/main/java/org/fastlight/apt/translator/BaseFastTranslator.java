@@ -10,6 +10,7 @@ import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.Type.ArrayType;
 import com.sun.tools.javac.code.Type.TypeVar;
+import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.comp.Flow.AssignAnalyzer;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -20,11 +21,9 @@ import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Pair;
 import org.apache.commons.collections4.CollectionUtils;
-import org.fastlight.apt.model.FastAspectContext;
-import org.fastlight.apt.model.MetaAnnotation;
-import org.fastlight.apt.model.MetaMethod;
-import org.fastlight.apt.model.MetaParameter;
+import org.fastlight.apt.model.*;
 import org.fastlight.apt.model.compile.AnnotationCompile;
+import org.fastlight.apt.model.compile.MethodCompile;
 import org.fastlight.apt.model.compile.ParameterCompile;
 import org.fastlight.core.util.FastMaps;
 
@@ -33,6 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import java.util.Locale;
@@ -54,6 +54,12 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     protected final JCExpression newMapMethod;
     protected final JCExpression createAnnotationMethod;
     protected final JCExpression createParamMethod;
+
+    protected MethodCompile ctxCompile;
+
+    public void init(MethodCompile ctxCompile) {
+        this.ctxCompile = ctxCompile;
+    }
 
     public static final Map<String, String> PRIMITIVE_MAP = FastMaps.newHashMapWithPair(
             "int", "java.lang.Integer",
@@ -485,7 +491,6 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
-     * @see MetaParameter#create(java.lang.Class, String, MetaAnnotation[])
      * @see MetaAnnotation#create(java.lang.Class, Map)
      * @see FastMaps#newHashMapWithPair(Object...)
      */
@@ -573,6 +578,97 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         return treeMaker.Literal(value);
     }
 
+
+    /**
+     * @see MetaMethod#create(Integer, boolean, String, MetaClass, MetaParameter[], Object, MetaAnnotation[], Map)
+     */
+    protected JCExpression newMetaExpression(Integer cacheIndex) {
+        return treeMaker.Apply(
+                List.nil(),
+                memberAccess(getCreateMethod(MetaMethod.class)),
+                List.of(treeMaker.Literal(cacheIndex),
+                        isStaticExpression(),
+                        methodNameExpression(),
+                        metaOwnerExpression(),
+                        paramsExpression(),
+                        returnTypeExpression(),
+                        methodAnnotationsExpression(),
+                        metaExtensionExpression()
+                )
+        );
+    }
+
+    /**
+     * 扩展元素
+     */
+    protected JCExpression metaExtensionExpression() {
+        return treeMaker.Apply(List.nil(), newMapMethod, List.nil());
+    }
+
+
+    /**
+     * @see FastAspectContext#getOwner()
+     */
+    @CheckForNull
+    protected JCExpression ownerExpression() {
+        if (ctxCompile.getMethodElement().getModifiers().contains(Modifier.STATIC)) {
+            return treeMaker.Literal(TypeTag.BOT, null);
+        }
+        return treeMaker.Ident(getNameFromString("this"));
+    }
+
+    /**
+     * @see org.fastlight.apt.model.MetaClass#create(Object, MetaAnnotation[])
+     */
+    protected JCExpression metaOwnerExpression() {
+        JCExpression ownerType = classLiteral(ctxCompile.getOwnerElement().type);
+        JCExpression annotations = createAnnotationArrayExpression(ctxCompile.getOwnerElement().getAnnotationMirrors());
+        return treeMaker.Apply(
+                List.nil(),
+                memberAccess(getCreateMethod(MetaClass.class)),
+                List.of(ownerType, annotations)
+        );
+    }
+
+    /**
+     * @see MetaMethod#getReturnType()
+     */
+    protected JCExpression returnTypeExpression() {
+        return classLiteral(ctxCompile.getReturnType());
+    }
+
+    /**
+     * @see MetaMethod#getAnnotations()
+     */
+    protected JCExpression methodAnnotationsExpression() {
+        return createAnnotationArrayExpression(ctxCompile.getMethodElement().getAnnotationMirrors());
+    }
+
+    /**
+     * @see MetaMethod#getParameters()
+     */
+    protected JCExpression paramsExpression() {
+        return paramsExpression((List<VarSymbol>) ctxCompile.getMethodElement().getParameters());
+    }
+
+
+    /**
+     * @see MetaMethod#isStatic()
+     */
+    protected JCExpression isStaticExpression() {
+        if (ctxCompile.getMethodElement().getModifiers().contains(Modifier.STATIC)) {
+            return treeMaker.Literal(true);
+        }
+        return treeMaker.Literal(false);
+    }
+
+    /**
+     * @see MetaMethod#getName()
+     */
+    protected JCExpression methodNameExpression() {
+        return treeMaker.Literal(ctxCompile.getMethodDecl().name.toString());
+    }
+
     /**
      * String -> Name
      *
@@ -607,6 +703,14 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected void logError(String message) {
         messager.printMessage(Kind.ERROR, message);
+    }
+
+
+    /**
+     * 获取 xxx.create 方法
+     */
+    protected String getCreateMethod(java.lang.Class<?> cls) {
+        return cls.getName() + ".create";
     }
 
 }

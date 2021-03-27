@@ -1,7 +1,7 @@
-package org.fastlight.apt.handler;
+package org.fastlight.aop.handler;
 
 import com.google.common.collect.Lists;
-import org.fastlight.apt.model.FastAspectContext;
+import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.core.lambda.action.FastAction1;
 
 import java.util.Comparator;

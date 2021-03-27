@@ -1,12 +1,12 @@
-package org.fastlight.apt.annotation;
+package org.fastlight.aop.annotation;
 
-import org.fastlight.apt.handler.FastAspectHandlerBuilder;
-import org.fastlight.apt.handler.FastAspectSpiHandlerBuilder;
+import org.fastlight.aop.handler.FastAspectHandlerBuilder;
+import org.fastlight.aop.handler.FastAspectSpiHandlerBuilder;
 
 import java.lang.annotation.*;
 
 /**
- * 注入切面逻辑，必须实现接口 {@link org.fastlight.apt.handler.FastAspectHandler}
+ * 注入切面逻辑，必须实现接口 {@link org.fastlight.aop.handler.FastAspectHandler}
  *
  * @author ychost@outlook.com
  * @date 2021-03-27

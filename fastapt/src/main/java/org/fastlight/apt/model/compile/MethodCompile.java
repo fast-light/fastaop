@@ -1,10 +1,12 @@
 package org.fastlight.apt.model.compile;
 
+import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 
 import javax.lang.model.element.ExecutableElement;
+import java.util.Map;
 
 /**
  * 保存编译过程中的方法信息
@@ -30,9 +32,9 @@ public class MethodCompile {
     private ExecutableElement methodElement;
 
     /**
-     * 构造器，{@link org.fastlight.apt.model.FastAspectContext} 会用到
+     * 扩展元素
      */
-    private Type builder;
+    private Map<String, Object> extensions = Maps.newHashMap();
 
     public Type getReturnType() {
         return methodDecl.getReturnType().type;
@@ -55,13 +57,6 @@ public class MethodCompile {
         this.methodDecl = methodDecl;
     }
 
-    public Type getBuilder() {
-        return builder;
-    }
-
-    public void setBuilder(Type builder) {
-        this.builder = builder;
-    }
 
     public ExecutableElement getMethodElement() {
         return methodElement;
@@ -69,5 +64,14 @@ public class MethodCompile {
 
     public void setMethodElement(ExecutableElement methodElement) {
         this.methodElement = methodElement;
+    }
+
+    public void addExtension(String key, Object value) {
+        extensions.put(key, value);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getExtension(String key) {
+        return (T) extensions.get(key);
     }
 }
