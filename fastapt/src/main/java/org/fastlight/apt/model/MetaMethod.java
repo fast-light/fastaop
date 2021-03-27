@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.fastlight.apt.handler.FastAspectHandler;
 import org.fastlight.apt.handler.FastAspectHandlerBuilder;
+import org.fastlight.core.util.ReflectUtils;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -45,7 +46,7 @@ public class MetaMethod {
     /**
      * 方法所在类的元数据
      */
-    private MetaClass ownerType;
+    private MetaClass metaOwner;
 
     /**
      * 方法参数
@@ -67,6 +68,55 @@ public class MetaMethod {
      * 返回获取当前方法对象，懒汉模式
      */
     private transient Method method;
+
+    /**
+     * 构造一个方法元数据
+     */
+    public static MetaMethod create(
+            Integer cacheIndex,
+            boolean isStatic,
+            String name,
+            MetaClass metaOwner,
+            MetaParameter[] parameters,
+            Object returnType,
+            Class<? extends FastAspectHandlerBuilder> builder,
+            MetaAnnotation[] annotations
+    ) {
+        MetaMethod metaMethod = new MetaMethod();
+        metaMethod.cacheIndex = cacheIndex;
+        metaMethod.metaOwner = metaOwner;
+        metaMethod.isStatic = isStatic;
+        metaMethod.name = name;
+        metaMethod.parameters = parameters;
+        if (returnType instanceof Class) {
+            metaMethod.returnType = (Class<?>) returnType;
+        } else {
+            metaMethod.returnType = ReflectUtils.forNameCache(returnType.toString());
+        }
+        metaMethod.builder = builder;
+        metaMethod.annotations = annotations;
+        return metaMethod;
+    }
+
+    /**
+     * 缓存执行器
+     */
+    public static Map<Class<?>, FastAspectHandler> HANDLER_MAP = Maps.newHashMap();
+
+    /**
+     * 构造执行器
+     */
+    public FastAspectHandler buildHandler() throws IllegalAccessException, InstantiationException {
+        if (this.handler != null) {
+            return this.handler;
+        }
+        FastAspectHandler buildHandler = HANDLER_MAP.get(builder);
+        if (buildHandler == null) {
+            buildHandler = builder.newInstance().build();
+        }
+        this.handler = buildHandler;
+        return buildHandler;
+    }
 
     /**
      * 全局元数据缓存
@@ -93,8 +143,8 @@ public class MetaMethod {
         return returnType;
     }
 
-    public MetaClass getOwnerType() {
-        return ownerType;
+    public MetaClass getMetaOwner() {
+        return metaOwner;
     }
 
     public MetaParameter[] getParameters() {
@@ -117,7 +167,7 @@ public class MetaMethod {
     public Method getMethod() {
         if (method == null) {
             method = MethodUtils.getMatchingMethod(
-                    ownerType.getType(),
+                    metaOwner.getType(),
                     name,
                     Arrays.stream(parameters).map(MetaParameter::getType).toArray(Class<?>[]::new)
             );
@@ -125,7 +175,7 @@ public class MetaMethod {
         // 有泛型的情况，可能会出现匹配不到，这里只要方法名，方法参数个数，[方法参数名] 相等的唯一匹配即可
         // 因为有泛型，所以就不匹配类型了
         if (method == null) {
-            List<Method> methodList = Arrays.stream(ownerType.getType().getDeclaredMethods())
+            List<Method> methodList = Arrays.stream(metaOwner.getType().getDeclaredMethods())
                     .filter(v -> name.equals(v.getName()))
                     .filter(v -> v.getParameterCount() == parameters.length)
                     .filter(v -> {

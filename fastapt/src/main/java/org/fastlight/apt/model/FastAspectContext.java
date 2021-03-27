@@ -1,6 +1,7 @@
 package org.fastlight.apt.model;
 
 import com.google.common.collect.Maps;
+import org.fastlight.apt.handler.FastAspectHandler;
 
 import javax.annotation.CheckForNull;
 import java.util.Map;
@@ -27,9 +28,67 @@ public class FastAspectContext {
     private Object returnVal;
 
     /**
+     * 方法的入参
+     */
+    private Object[] args;
+
+    /**
      * 扩展属性，可自定义添加，仅在方法内有效，比如在 preHandle 放入方法的执行时间戳，然后再 postHandle 能算出方法的耗时
      */
     private Map<String, Object> extensions;
+
+    /**
+     * 控制当前方法是否立刻 return 或者继续执行方法逻辑
+     */
+    private FastCtrlFlow ctrlFlow = FastCtrlFlow.EXEC_FLOW;
+
+    /**
+     * 是否立即返回
+     */
+    public boolean isFastReturn() {
+        return FastCtrlFlow.FAST_RETURN.equals(ctrlFlow);
+    }
+
+    /**
+     * 立刻返回，如果是 void 则是 return
+     */
+    public void fastReturn(Object returnVal) {
+        setReturnVal(returnVal);
+        ctrlFlow = FastCtrlFlow.FAST_RETURN;
+    }
+
+    /**
+     * 构造一个上下文
+     */
+    public static FastAspectContext create(
+            MetaMethod metaMethod,
+            Object owner,
+            Object[] args
+    ) {
+        FastAspectContext ctx = new FastAspectContext();
+        ctx.metaMethod = metaMethod;
+        ctx.owner = owner;
+        ctx.args = args;
+        return ctx;
+    }
+
+    /**
+     * 构造一个 Handler
+     */
+    public FastAspectHandler buildHandler() {
+        try {
+            return getMetaMethod().buildHandler();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 通过注解可以替换内部实现，将其引用到局部变量
+     */
+    public static FastAspectContext currentContext() {
+        throw new RuntimeException("[FastAop] context not find @FastAspect");
+    }
 
     /**
      * 添加扩展属性，方法内有效
@@ -104,5 +163,9 @@ public class FastAspectContext {
     @CheckForNull
     public Object getThis() {
         return getOwner();
+    }
+
+    public Object[] getArgs() {
+        return args;
     }
 }

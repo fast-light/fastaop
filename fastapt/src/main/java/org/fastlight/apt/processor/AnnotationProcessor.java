@@ -1,12 +1,11 @@
 package org.fastlight.apt.processor;
 
 import com.google.auto.service.AutoService;
+import com.google.common.collect.Lists;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.*;
 import javax.lang.model.element.TypeElement;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -18,6 +17,11 @@ import java.util.Set;
 @AutoService(Processor.class)
 @SupportedAnnotationTypes({"*"})
 public class AnnotationProcessor extends AbstractProcessor {
+
+    List<? extends BaseFastProcessor<?>> processors = Lists.newArrayList(
+            new FastAspectProcessor()
+    );
+
     @Override
     public boolean process(Set<? extends TypeElement> ats, RoundEnvironment env) {
         try {
@@ -33,11 +37,25 @@ public class AnnotationProcessor extends AbstractProcessor {
         return true;
     }
 
-    private void processOver() {
-
+    /**
+     * roud 完成
+     */
+    protected void processOver() {
+        processors.forEach(BaseFastProcessor::processOver);
     }
 
-    private void processAnnotations(Set<? extends TypeElement> ats, RoundEnvironment env) {
+    /**
+     * 处理注解
+     */
+    protected void processAnnotations(Set<? extends TypeElement> ats, RoundEnvironment env) {
+        processors.forEach(v -> v.processAnnotations(ats, env));
+    }
 
+    /**
+     * 初始化注入工具
+     */
+    @Override
+    public synchronized void init(ProcessingEnvironment environment) {
+        processors.forEach(v -> v.init(environment));
     }
 }
