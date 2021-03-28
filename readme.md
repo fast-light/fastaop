@@ -40,7 +40,7 @@ AspectJ、Spring-AOP 框架有如下特点：
 </dependency>
 ```
 
-### 添加切面
+### 二、添加切面
 
 这里仅拦截了方法执行前和执行后，分别打印了入参和出参，同时输出了方法耗时，其关键元素如下：
 
@@ -92,7 +92,7 @@ public class LogHandler implements FastAspectHandler {
 }
 ```
 
-### 二、使用切面
+### 三、使用切面
 
 使用切面的方法如下：
 
