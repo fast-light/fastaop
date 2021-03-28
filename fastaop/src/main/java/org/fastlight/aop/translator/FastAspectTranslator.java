@@ -124,8 +124,9 @@ public class FastAspectTranslator extends BaseFastTranslator {
         );
         // 非静态内部类不能加 static
         long modifiers = Flags.PRIVATE;
-        if (!(ctxCompile.getOwnerElement() instanceof PackageElement)
-                && !ctxCompile.getOwnerElement().getModifiers().contains(Modifier.STATIC)) {
+        boolean isInnerClass = !(ctxCompile.getOwnerElement().getEnclosingElement() instanceof PackageElement);
+        boolean isStaticClass = ctxCompile.getOwnerElement().getModifiers().contains(Modifier.STATIC);
+        if (!isInnerClass || isStaticClass) {
             modifiers = modifiers | Flags.STATIC;
         }
         // 添加 变量定义
