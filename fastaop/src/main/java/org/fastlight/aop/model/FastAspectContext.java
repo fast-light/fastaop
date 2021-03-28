@@ -5,7 +5,6 @@ import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.handler.FastAspectHandlerBuilder;
 import org.fastlight.apt.model.MetaMethod;
 
-import javax.annotation.CheckForNull;
 import java.util.Map;
 
 /**
@@ -176,7 +175,7 @@ public class FastAspectContext {
         return metaMethod;
     }
 
-    @CheckForNull
+
     public Object getOwner() {
         return owner;
     }
@@ -186,7 +185,7 @@ public class FastAspectContext {
      *
      * @return 调用调用的 this
      */
-    @CheckForNull
+
     public Object getThis() {
         return getOwner();
     }

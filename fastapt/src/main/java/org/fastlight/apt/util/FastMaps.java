@@ -1,6 +1,7 @@
-package org.fastlight.core.util;
+package org.fastlight.apt.util;
 
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 提供一些便捷的 Map 工具方法

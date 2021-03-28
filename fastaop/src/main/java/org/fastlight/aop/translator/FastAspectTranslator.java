@@ -50,6 +50,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
         super(treeMaker, names, messager);
     }
 
+    @Override
+    public void visitAnnotation(JCAnnotation jcAnnotation) {
+        super.visitAnnotation(jcAnnotation);
+    }
+
     /**
      * 将切面代码织入方法
      */
@@ -69,7 +74,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
         if (jcMethodDecl.toString().contains(HANDLER_VAR + ".preHandle")) {
             return;
         }
+        if (isMarkedMethod()) {
+            return;
+        }
         Integer methodIndex = addMetaCache();
+        markCacheAnnotation(methodIndex);
         JCVariableDecl ctxVar = newContextVar(methodIndex);
         JCVariableDecl handleVar = handleVar(ctxVar);
         ListBuffer<JCStatement> ctxStatements = new ListBuffer<>();
@@ -93,6 +102,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
                 }
         );
     }
+
 
     /**
      * 添加 __fast_meta_cache 变量

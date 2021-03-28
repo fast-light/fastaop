@@ -1,6 +1,6 @@
 package org.fastlight.apt.model;
 
-import org.fastlight.core.util.ReflectUtils;
+import org.fastlight.apt.util.ReflectUtils;
 
 /**
  * @author ychost@outlook.com
@@ -21,14 +21,14 @@ public class MetaClass {
      * 构造一个类的元数据
      */
     public static MetaClass create(
-            Object ownerType,
+            Object type,
             MetaAnnotation[] annotations
     ) {
         MetaClass metaClass = new MetaClass();
-        if (ownerType instanceof Class) {
-            metaClass.type = (Class<?>) ownerType;
+        if (type instanceof Class) {
+            metaClass.type = (Class<?>) type;
         } else {
-            metaClass.type = ReflectUtils.forNameCache(ownerType.toString());
+            metaClass.type = ReflectUtils.forNameCache(type.toString());
         }
         metaClass.annotations = annotations;
         return metaClass;

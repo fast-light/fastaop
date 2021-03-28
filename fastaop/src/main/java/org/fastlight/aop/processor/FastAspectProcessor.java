@@ -7,7 +7,6 @@ import org.fastlight.aop.translator.FastAspectTranslator;
 import org.fastlight.apt.model.compile.MethodCompile;
 import org.fastlight.apt.processor.BaseFastProcessor;
 
-import javax.annotation.Nullable;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -19,7 +18,7 @@ import java.util.Optional;
  */
 public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
     @Override
-    public void processExecutableElement(ExecutableElement executableElement, @Nullable AnnotationMirror atm) {
+    public void processExecutableElement(ExecutableElement executableElement, AnnotationMirror atm) {
         if (atm == null) {
             return;
         }
@@ -42,6 +41,9 @@ public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
         methodCompile.addExtension("builder", getAtValueData(atm, "builder"));
         methodCompile.setMethodElement(executableElement);
         FastAspectTranslator translator = getTranslator(methodCompile);
+        if (translator.isMarkedMethod()) {
+            return;
+        }
         // 1. 父类元素添加静态缓存变量
         translator.addCacheVar(javacTrees.getTree(ownerElement));
         // 2. 方法内部织入切面代码
@@ -62,7 +64,7 @@ public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
     }
 
     @Override
-    public void processTypeElement(TypeElement typeElement, @Nullable AnnotationMirror atm) {
+    public void processTypeElement(TypeElement typeElement, AnnotationMirror atm) {
         processExecutableOfTypeElement(typeElement, atm, false);
     }
 }

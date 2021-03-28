@@ -1,15 +1,13 @@
 package org.fastlight.apt.model;
 
 import com.google.common.collect.Maps;
-import org.apache.commons.lang3.reflect.MethodUtils;
-import org.fastlight.core.util.ReflectUtils;
+import org.fastlight.apt.annotation.FastMarkedMethod;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
+import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 方法元数据
@@ -64,36 +62,30 @@ public class MetaMethod {
      */
     public static MetaMethod create(
             Integer cacheIndex,
-            boolean isStatic,
             String name,
             MetaClass metaOwner,
             MetaParameter[] parameters,
-            Object returnType,
             MetaAnnotation[] annotations,
             Map<String, Object> metaExtension
     ) {
         MetaMethod metaMethod = new MetaMethod();
         metaMethod.cacheIndex = cacheIndex;
         metaMethod.metaOwner = metaOwner;
-        metaMethod.isStatic = isStatic;
         metaMethod.name = name;
         metaMethod.parameters = parameters;
-        if (returnType instanceof Class) {
-            metaMethod.returnType = (Class<?>) returnType;
-        } else {
-            metaMethod.returnType = ReflectUtils.forNameCache(returnType.toString());
-        }
         metaMethod.annotations = annotations;
         if (metaExtension != null && metaExtension.size() > 0) {
             metaMethod.metaExtensions.putAll(metaExtension);
         }
+        // 赋值 returnType，parameter.type，isStatic
+        metaMethod.patchedByReflectMethod();
         return metaMethod;
     }
 
     /**
      * 全局元数据缓存
      */
-    private Map<String, Object> metaExtensions = Maps.newHashMap();
+    private final Map<String, Object> metaExtensions = Maps.newHashMap();
 
     public int getCacheIndex() {
         return cacheIndex;
@@ -125,39 +117,44 @@ public class MetaMethod {
     }
 
     /**
-     * 反射获取 Method 信息
-     *
      * @return 当前 Method
      */
     public Method getMethod() {
-        if (method == null) {
-            method = MethodUtils.getMatchingMethod(
-                    metaOwner.getType(),
-                    name,
-                    Arrays.stream(parameters).map(MetaParameter::getType).toArray(Class<?>[]::new)
-            );
+        if (method != null) {
+            return method;
         }
-        // 有泛型的情况，可能会出现匹配不到，这里只要方法名，方法参数个数，[方法参数名] 相等的唯一匹配即可
-        // 因为有泛型，所以就不匹配类型了
-        if (method == null) {
-            List<Method> methodList = Arrays.stream(metaOwner.getType().getDeclaredMethods())
-                    .filter(v -> name.equals(v.getName()))
-                    .filter(v -> v.getParameterCount() == parameters.length)
-                    .filter(v -> {
-                        for (int i = 0; i < v.getParameters().length; i++) {
-                            if (v.getParameters()[i].isNamePresent() && !Objects.equals(parameters[i].getName(), v.getParameters()[i].getName())) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    }).collect(Collectors.toList());
-            if (methodList.size() == 1) {
-                method = methodList.get(0);
+        for (Method declaredMethod : metaOwner.getType().getDeclaredMethods()) {
+            for (Annotation annotation : declaredMethod.getAnnotations()) {
+                if (!(annotation instanceof FastMarkedMethod)) {
+                    continue;
+                }
+                FastMarkedMethod fastMarkedMethod = (FastMarkedMethod) annotation;
+                if (Objects.equals(cacheIndex, fastMarkedMethod.value())) {
+                    method = declaredMethod;
+                    break;
+                }
+            }
+        }
+        if (method != null) {
+            if (!name.equals(method.getName())) {
+                throw new RuntimeException(String.format("[FastAop] %s.%s is not match marked method %s.%s", metaOwner.getType(), name, metaOwner.getType(), method.getName()));
             }
             return method;
         }
+        throw new RuntimeException(String.format("[FastAop] %s.%s not found", metaOwner.getType(), name));
+    }
 
-        return method;
+    /**
+     * 通过反射获取方法将 paramType 和 returnType 进行打补丁
+     * 因为这些TYPE 是 T[][][] 这种多维泛型数组的时候，在语法树处理上面不太好搞，这里直接捕获运行时状态，让其更加的准确
+     */
+    protected void patchedByReflectMethod() {
+        Method method = getMethod();
+        for (int i = 0; i < method.getParameters().length; i++) {
+            parameters[i].setType(method.getParameters()[i].getType());
+        }
+        returnType = method.getReturnType();
+        isStatic = Modifier.isStatic(method.getModifiers());
     }
 
     public void addMetaExtension(String key, Object value) {

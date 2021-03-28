@@ -8,11 +8,9 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
-import org.apache.commons.collections4.CollectionUtils;
-import org.fastlight.core.util.ReflectUtils;
+import org.fastlight.apt.util.FastCollections;
+import org.fastlight.apt.util.ReflectUtils;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nullable;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -98,7 +96,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param ats      元素的注解信息，可能为空
      * @param roundEnv 处理工具，能感知到注解相关的元素信息
      */
-    public void processAnnotations(@Nullable Set<? extends TypeElement> ats, RoundEnvironment roundEnv) {
+    public void processAnnotations(Set<? extends TypeElement> ats, RoundEnvironment roundEnv) {
         // 默认情况下仅取出 atClass 相关的元素
         Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(atClass);
         Set<String> supports = getSupportedAnnotationTypes();
@@ -106,7 +104,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
         if (supports.contains("*")) {
             elements = roundEnv.getRootElements();
         }
-        if (CollectionUtils.isEmpty(elements)) {
+        if (FastCollections.isEmpty(elements)) {
             return;
         }
         for (Element element : elements) {
@@ -130,7 +128,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param executableElement method,constructor,initializer etc..
      * @param atm               注解元素
      */
-    public abstract void processExecutableElement(ExecutableElement executableElement, @Nullable AnnotationMirror atm);
+    public abstract void processExecutableElement(ExecutableElement executableElement, AnnotationMirror atm);
 
     /**
      * 处理标注在类/接口上面的元素
@@ -138,7 +136,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param typeElement class,interface 元素
      * @param atm         注解元素
      */
-    public abstract void processTypeElement(TypeElement typeElement, @Nullable AnnotationMirror atm);
+    public abstract void processTypeElement(TypeElement typeElement, AnnotationMirror atm);
 
     /**
      * 处理 TypeElement 下面的 ExecutableElement，支持递归，常用语仅对 Method 进行改造，不对 Field 改造
@@ -147,7 +145,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param atm         注解元素
      * @param recursive   是否递归处理，及对子类进行一样的处理
      */
-    public void processExecutableOfTypeElement(TypeElement typeElement, @Nullable AnnotationMirror atm, boolean recursive) {
+    public void processExecutableOfTypeElement(TypeElement typeElement, AnnotationMirror atm, boolean recursive) {
         List<? extends Element> elements = typeElement.getEnclosedElements();
         for (Element element : elements) {
             if (element instanceof ExecutableElement) {
@@ -170,7 +168,6 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param atClass 注解类型
      * @return 注解元素，如果没找到就返回 null
      */
-    @CheckForNull
     public AnnotationMirror getAtMirror(Element element, Class<? extends Annotation> atClass) {
         return MoreElements.getAnnotationMirror(element, atClass).orNull();
     }
@@ -193,7 +190,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
     /**
      * 获取父元素，即包装它的元素，这里仅仅做了强转的判空
      */
-    public <M> M getOwnerElement(@Nullable Element element, Class<M> ownerClass) {
+    public <M> M getOwnerElement(Element element, Class<M> ownerClass) {
         if (element == null) {
             return null;
         }
@@ -215,7 +212,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
      * @param <M>   字段类型
      * @return 字段的值
      */
-    public <M> M getAtValueData(@Nullable AnnotationMirror atm, String field) {
+    public <M> M getAtValueData(AnnotationMirror atm, String field) {
         if (atm == null) {
             return null;
         }

@@ -9,7 +9,6 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>fastcore</module>
         <module>fastapt</module>
         <module>fastaop</module>
         <module>example</module>
@@ -30,11 +29,6 @@
             <dependency>
                 <groupId>org.fastlight</groupId>
                 <artifactId>fastapt</artifactId>
-                <version>${fast.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.fastlight</groupId>
-                <artifactId>fastcore</artifactId>
                 <version>${fast.version}</version>
             </dependency>
             <dependency>

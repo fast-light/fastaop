@@ -1,12 +1,9 @@
-package org.fastlight.core.util;
+package org.fastlight.apt.util;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -77,7 +74,7 @@ public class ReflectUtils {
      * @param classLoader
      * @return
      */
-    public static Class<?> forName(String clsName, boolean initialize, @Nonnull ClassLoader classLoader)
+    public static Class<?> forName(String clsName, boolean initialize, ClassLoader classLoader)
             throws ClassNotFoundException {
         clsName = resolveClassName(clsName);
         Class<?> primitiveType = PRIMITIVE_CLASS.get(clsName);
@@ -122,7 +119,6 @@ public class ReflectUtils {
     /**
      * 带缓存，可提升性能，注意用的默认的 classLoader
      */
-    @CheckForNull
     public static Class<?> forNameCache(String clsName) {
         try {
             Class<?> cls = CLASS_CACHE.get(clsName);
@@ -144,9 +140,9 @@ public class ReflectUtils {
      *                  因为不加这个限制极有可能死循环
      */
     public static <T> void assignDefault(
-            @Nullable Object obj,
-            @Nonnull Class<T> assignType,
-            @Nonnull T assignValue,
+            Object obj,
+            Class<T> assignType,
+            T assignValue,
             boolean recursive) throws IllegalAccessException {
         if (obj == null || (!ClassUtils.isPrimitiveOrWrapper(assignType) && recursive)) {
             return;
@@ -173,8 +169,8 @@ public class ReflectUtils {
      * @return
      */
     @SuppressWarnings("unchecked")
-    @Nullable
-    public static <T> T newArrayInstance(@Nonnull Class<T> cls, int length) {
+
+    public static <T> T newArrayInstance(Class<T> cls, int length) {
         if (!cls.isArray()) {
             return null;
         }

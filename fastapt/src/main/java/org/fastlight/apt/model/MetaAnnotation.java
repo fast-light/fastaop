@@ -2,7 +2,7 @@ package org.fastlight.apt.model;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.fastlight.core.util.ReflectUtils;
+import org.fastlight.apt.util.ReflectUtils;
 
 import java.lang.annotation.Annotation;
 import java.util.Map;

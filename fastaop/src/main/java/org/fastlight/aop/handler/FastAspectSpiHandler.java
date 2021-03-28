@@ -2,11 +2,11 @@ package org.fastlight.aop.handler;
 
 import com.google.common.collect.Lists;
 import org.fastlight.aop.model.FastAspectContext;
-import org.fastlight.core.lambda.action.FastAction1;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.Consumer;
 
 /**
  * 通过 SPI 注入执行器，然后代理调用他们
@@ -137,10 +137,10 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      * @param ctx    方法上下文
      * @param action 回调的生命周期
      */
-    protected void execProxy(FastAspectContext ctx, FastAction1<FastAspectHandler> action) {
+    protected void execProxy(FastAspectContext ctx, Consumer<FastAspectHandler> action) {
         List<Integer> supportIndices = ctx.getExtension(EXT_SUPPORT_INDICES);
         for (Integer index : supportIndices) {
-            action.invoke(spiHandlers.get(index));
+            action.accept(spiHandlers.get(index));
         }
     }
 }

@@ -20,16 +20,14 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Pair;
-import org.apache.commons.collections4.CollectionUtils;
+import org.fastlight.apt.annotation.FastMarkedMethod;
 import org.fastlight.apt.model.*;
 import org.fastlight.apt.model.compile.AnnotationCompile;
 import org.fastlight.apt.model.compile.MethodCompile;
 import org.fastlight.apt.model.compile.ParameterCompile;
-import org.fastlight.core.util.FastMaps;
+import org.fastlight.apt.util.FastCollections;
+import org.fastlight.apt.util.FastMaps;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Modifier;
@@ -76,7 +74,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         this.treeMaker = treeMaker;
         this.names = names;
         this.messager = messager;
-        newMapMethod = memberAccess("org.fastlight.core.util.FastMaps.newHashMapWithPair");
+        newMapMethod = memberAccess("org.fastlight.apt.util.FastMaps.newHashMapWithPair");
         createAnnotationMethod = memberAccess("org.fastlight.apt.model.MetaAnnotation.create");
         createParamMethod = memberAccess("org.fastlight.apt.model.MetaParameter.create");
     }
@@ -102,6 +100,33 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
+     * 方法上面添加 @FastAspectMethod 方便在运行的时候精确获取 Method
+     *
+     * @param methodIndex 方法在 meta_cache 中的索引
+     */
+    protected void markCacheAnnotation(Integer methodIndex) {
+        if (isMarkedMethod()) {
+            return;
+        }
+        JCAnnotation annotation = treeMaker.Annotation(memberAccess(FastMarkedMethod.class.getName()), List.of(
+                treeMaker.Assign(memberAccess("value"), treeMaker.Literal(methodIndex))
+        ));
+        ListBuffer<JCAnnotation> annotations = new ListBuffer<>();
+        annotations.addAll(ctxCompile.getMethodDecl().mods.annotations);
+        annotations.add(annotation);
+        ctxCompile.getMethodDecl().mods.annotations = annotations.toList();
+    }
+
+    /**
+     * 判断方法是否已经被织入过，通过是否添加了特定注解来判断
+     */
+    public boolean isMarkedMethod() {
+        return ctxCompile.getMethodDecl().mods.annotations.stream().filter(v -> v.type != null)
+                .anyMatch(v -> v.type.toString().equals(FastMarkedMethod.class.getName()));
+    }
+
+
+    /**
      * 把 injectStatement 注入到方法的 try catch finally，同时会给方法注入 try catch finally
      *
      * @param bodyStatements      原有方法体语句
@@ -115,13 +140,13 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * @param throwError          catch 住了异常之后是否继续往上面抛，默认 true
      */
     protected JCStatement injectTryCatchFinally(
-            @Nonnull List<JCStatement> bodyStatements,
-            @Nullable JCStatement tryStatement,
-            @Nullable JCStatement catchStatement,
-            @Nullable JCStatement finallyStatement,
-            @Nullable String catchExceptionClass,
-            @Nullable String catchVarName,
-            @Nullable Boolean throwError,
+            List<JCStatement> bodyStatements,
+            JCStatement tryStatement,
+            JCStatement catchStatement,
+            JCStatement finallyStatement,
+            String catchExceptionClass,
+            String catchVarName,
+            Boolean throwError,
             int startPos
     ) {
         // 注入 try 里面的语句
@@ -234,7 +259,6 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * @param statements 方法体语句
      * @return super() 这一行语句，可能为空，只有构造函数才可能有，因为 super() 必须放到第一行
      */
-    @CheckForNull
     protected JCStatement getCallSuperStatement(List<JCStatement> statements) {
         JCStatement callSuper = null;
         if (statements.size() > 0) {
@@ -345,7 +369,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     protected JCExpression createAnnotationArrayExpression(
             java.util.List<? extends AnnotationMirror> annotationMirrors
     ) {
-        if (CollectionUtils.isEmpty(annotationMirrors)) {
+        if (FastCollections.isEmpty(annotationMirrors)) {
             return treeMaker.NewArray(
                     memberAccess(MetaAnnotation.class.getName()),
                     List.nil(),
@@ -380,10 +404,11 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected JCExpression classLiteral(Type type) {
         if (type instanceof ArrayType) {
-            if (((ArrayType) type).elemtype.tsym.erasure_field == null) {
-                return treeMaker.Literal(Object.class.getName());
+            ArrayType arrayType = (ArrayType) type;
+            if (arrayType.elemtype.tsym.erasure_field != null) {
+                return treeMaker.ClassLiteral(type);
             }
-            return treeMaker.ClassLiteral(type);
+            return treeMaker.Literal(Object.class.getName());
         }
         // 处理泛型
         if (type instanceof TypeVar) {
@@ -421,7 +446,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * 提取注解的编译信息
      */
     protected List<AnnotationCompile> getAnnotationCompiles(List<JCAnnotation> annotations) {
-        if (CollectionUtils.isEmpty(annotations)) {
+        if (FastCollections.isEmpty(annotations)) {
             return List.nil();
         }
         ListBuffer<AnnotationCompile> metaAnnotations = new ListBuffer<>();
@@ -431,7 +456,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             metaAnnotation.setType(annotation.attribute.type);
             metaAnnotation.setInfos(List.nil());
             ListBuffer<AnnotationCompile.AnnotationInfo> annotationInfos = new ListBuffer<>();
-            if (CollectionUtils.isEmpty(annotation.attribute.values)) {
+            if (FastCollections.isEmpty(annotation.attribute.values)) {
                 continue;
             }
             for (Pair<MethodSymbol, Attribute> pair : annotation.attribute.values) {
@@ -580,18 +605,16 @@ public abstract class BaseFastTranslator extends TreeTranslator {
 
 
     /**
-     * @see MetaMethod#create(Integer, boolean, String, MetaClass, MetaParameter[], Object, MetaAnnotation[], Map)
+     * @see MetaMethod#create(Integer, String, MetaClass, MetaParameter[], MetaAnnotation[], Map)
      */
     protected JCExpression newMetaExpression(Integer cacheIndex) {
         return treeMaker.Apply(
                 List.nil(),
                 memberAccess(getCreateMethod(MetaMethod.class)),
                 List.of(treeMaker.Literal(cacheIndex),
-                        isStaticExpression(),
                         methodNameExpression(),
                         metaOwnerExpression(),
                         paramsExpression(),
-                        returnTypeExpression(),
                         methodAnnotationsExpression(),
                         metaExtensionExpression()
                 )
@@ -609,7 +632,6 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     /**
      * @see FastAspectContext#getOwner()
      */
-    @CheckForNull
     protected JCExpression ownerExpression() {
         if (ctxCompile.getMethodElement().getModifiers().contains(Modifier.STATIC)) {
             return treeMaker.Literal(TypeTag.BOT, null);
