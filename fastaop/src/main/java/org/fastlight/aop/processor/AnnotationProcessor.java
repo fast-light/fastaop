@@ -23,7 +23,9 @@ import java.util.List;
 public class AnnotationProcessor extends BaseAnnotationProcessor {
 
     List<? extends BaseFastProcessor<?>> processors = Lists.newArrayList(
-            new FastAspectProcessor()
+            new FastAspectProcessor(),
+            new FastAspectMarkProcessor(),
+            new FastAspectVarProcessor()
     );
 
     @Override

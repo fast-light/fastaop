@@ -71,16 +71,23 @@ public class FastAspectContext {
     /**
      * 构造一个上下文
      */
-    public static FastAspectContext create(
-            MetaMethod metaMethod,
-            Object owner,
-            Object[] args
-    ) {
+    public static FastAspectContext create(MetaMethod metaMethod, Object owner, Object[] args) {
         FastAspectContext ctx = new FastAspectContext();
         ctx.metaMethod = metaMethod;
         ctx.owner = owner;
         ctx.args = args;
         return ctx;
+    }
+
+    /**
+     * 获取入参 map，丢掉了注解
+     */
+    public Map<String, Object> getParamMap() {
+        Map<String, Object> map = Maps.newHashMap();
+        for (int i = 0; i < metaMethod.getParameters().length; i++) {
+            map.put(metaMethod.getParameters()[i].getName(), args[i]);
+        }
+        return map;
     }
 
     /**
@@ -118,8 +125,10 @@ public class FastAspectContext {
     /**
      * 添加扩展属性，方法内有效
      *
-     * @param key 扩展 key
-     * @param val 扩展 value
+     * @param key
+     *            扩展 key
+     * @param val
+     *            扩展 value
      */
     public void addExtension(String key, Object val) {
         if (extensions == null) {
@@ -131,22 +140,26 @@ public class FastAspectContext {
     /**
      * 获取扩展属性
      *
-     * @param key 扩展 key
-     * @param <T> 扩展 value 类型
+     * @param key
+     *            扩展 key
+     * @param <T>
+     *            扩展 value 类型
      * @return 扩展 value
      */
     public <T> T getExtension(String key) {
         if (extensions == null) {
             return null;
         }
-        return (T) extensions.get(key);
+        return (T)extensions.get(key);
     }
 
     /**
      * 添加全局的元数据扩展，每个 Method 有唯一的一个缓存池
      *
-     * @param key   扩展 key
-     * @param value 扩展 value
+     * @param key
+     *            扩展 key
+     * @param value
+     *            扩展 value
      */
     public void addMetaExtension(String key, Object value) {
         getMetaMethod().addMetaExtension(key, value);
@@ -155,8 +168,10 @@ public class FastAspectContext {
     /**
      * 获取全局的元数据扩展，每个 Method 有唯一的缓存池
      *
-     * @param key 扩展 key
-     * @param <T> 扩展 value 的类型
+     * @param key
+     *            扩展 key
+     * @param <T>
+     *            扩展 value 的类型
      * @return 扩展 value
      */
     public <T> T getMetaExtension(String key) {
@@ -174,7 +189,6 @@ public class FastAspectContext {
     public MetaMethod getMetaMethod() {
         return metaMethod;
     }
-
 
     public Object getOwner() {
         return owner;

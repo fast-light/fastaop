@@ -16,11 +16,11 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.element.*;
+import javax.tools.Diagnostic;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
 
 /**
  * 提供一些注解处理的基础方法
@@ -63,7 +63,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
     /**
      * 子类继承的泛型
      */
-    Class<T> atClass;
+    protected Class<T> atClass;
 
     /**
      * 初始化，注入所需要的所有元素
@@ -121,7 +121,6 @@ public abstract class BaseFastProcessor<T extends Annotation> {
         }
     }
 
-
     /**
      * 方法，构造函数，初始化语句都会进行到这里进行处理
      *
@@ -172,7 +171,6 @@ public abstract class BaseFastProcessor<T extends Annotation> {
         return MoreElements.getAnnotationMirror(element, atClass).orNull();
     }
 
-
     /**
      * 获取当前处理器支持的注解，优先走 {@link SupportedAnnotationTypes}，然后走继承的注解泛型
      */
@@ -198,7 +196,7 @@ public abstract class BaseFastProcessor<T extends Annotation> {
         if (ownerElement == null) {
             return null;
         }
-        if (ownerElement.getClass().equals(ownerClass)) {
+        if (ownerClass.isAssignableFrom(ownerElement.getClass())) {
             return (M) ownerElement;
         }
         return null;
@@ -218,6 +216,15 @@ public abstract class BaseFastProcessor<T extends Annotation> {
         }
         AnnotationValue atv = AnnotationMirrors.getAnnotationValue(atm, field);
         return (M) Optional.ofNullable(atv).map(AnnotationValue::getValue).orElse(null);
+    }
+
+    /**
+     * 打印 error 信息，同时终止编译
+     *
+     * @param message 待打印信息
+     */
+    protected void logError(String message) {
+        messager.printMessage(Diagnostic.Kind.ERROR, message);
     }
 
 }

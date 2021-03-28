@@ -199,17 +199,16 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * @formatter:off
-     * <example>
+     * @formatter:off <example>
      * ..
      * catch(Throwable e){
-     *     if(__fast_support){
-     *     __fast_handler.errorHandle(__fast_context,e);
-     *         if(__fast_context.isErrorFastReturn()){
-     *             return __fast_context.getReturnVal();
-     *         }
-     *     }
-     *     throw e;
+     * if(__fast_support){
+     * __fast_handler.errorHandle(__fast_context,e);
+     * if(__fast_context.isErrorFastReturn()){
+     * return __fast_context.getReturnVal();
+     * }
+     * }
+     * throw e;
      * }
      * </example>
      * @formatter:on
@@ -273,13 +272,12 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * @formatter:off
-     * <example>
+     * @formatter:off <example>
      * if(__fast_support){
-     *     __fast_handler.preHandle(__fast_context);
-     *     if(__fast_context.preFastReturn()){
-     *     return __fast_context.getReturnVal(); // 对于 void 直接 return;
-     *     }
+     * __fast_handler.preHandle(__fast_context);
+     * if(__fast_context.preFastReturn()){
+     * return __fast_context.getReturnVal(); // 对于 void 直接 return;
+     * }
      * }
      * </example>
      * @formatter:on

@@ -12,7 +12,7 @@ import java.lang.annotation.*;
  * @date 2021-03-27
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Documented
 public @interface FastAspect {
 
