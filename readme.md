@@ -159,7 +159,8 @@ FastAspectContext#getMetaMethod()
 ### 2. 切面逻辑注入
 
 ```
-切面逻辑是通过 @FastAspectMark 标记的，其功能是在 META-INF/services/org.fastlight.aop.handler.FastAspectHandler 注入了标记的服务这里是 org.fastlight.fastaop.example.handler.LogHandler
+切面逻辑是通过 @FastAspectMark 标记的，其功能是在 META-INF/services/org.fastlight.aop.handler.FastAspectHandler 
+注入了标记的服务这里是 org.fastlight.fastaop.example.handler.LogHandler
 ```
 
 ```java
