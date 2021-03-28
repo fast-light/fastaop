@@ -4,32 +4,21 @@ import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
 import org.fastlight.aop.model.FastAspectContext;
 
-import java.util.function.Consumer;
-
 /**
+ * 一个简单的 FastAop 调用 demo
+ *
  * @author ychost@outlook.com
  * @date 2021-03-27
  */
-@FastAspect
 public class AopExample {
-
     public static void main(String[] args) {
-        @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        String data = hello("fastaop");
-        System.out.println(data);
+        System.out.println("==>invoked: " + hello("[FastAop]"));
     }
 
     @FastAspect
     public static String hello(String name) {
+        System.out.println("[hello] [input]==> " + name);
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        System.out.println(ctx);
-        new Consumer<String>() {
-            @Override
-            public void accept(String o) {
-                FastAspectContext ctx2 = null;
-            }
-        };
-        return "hello: " + name;
+        return "hello-->>" + ctx.getArgs()[0] + "eq(" + (ctx.getArgs()[0] == name) + ")";
     }
-
 }
