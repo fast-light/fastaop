@@ -2,6 +2,7 @@ package org.fastlight.fastaop.example;
 
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
+import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.model.FastAspectContext;
 
 /**
@@ -19,6 +20,17 @@ public class AopExample {
     public static String hello(String name) {
         System.out.println("[hello] [input]==> " + name);
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
+        new FastAspectHandler() {
+            @Override
+            public boolean support(FastAspectContext ctxs) {
+                System.out.println(ctx);
+                return false;
+            }
+
+            @Override
+            public void preHandle(FastAspectContext ctx) {
+            }
+        };
         return "hello-->>" + ctx.getArgs()[0] + "eq(" + (ctx.getArgs()[0] == name) + ")";
     }
 }

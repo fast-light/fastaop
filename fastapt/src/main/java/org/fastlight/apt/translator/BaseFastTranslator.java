@@ -311,7 +311,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
-     * annotationMirrors -> ZeusMetaAnnotation[] expression，支持 defaultValue
+     * annotationMirrors -> MetaAnnotation[] expression，支持 defaultValue
      */
     protected JCExpression createAnnotationArrayExpression(
             java.util.List<? extends AnnotationMirror> annotationMirrors) {

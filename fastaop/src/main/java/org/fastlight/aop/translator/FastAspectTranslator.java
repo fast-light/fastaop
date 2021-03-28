@@ -37,6 +37,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
     public static final String META_CACHE_VAR = "__fast_meta_cache";
 
     /**
+     * 当前 visit 的是否为内部类，可避免对方法内部匿名类的切入
+     */
+    private boolean isInnerClass = false;
+
+    /**
      * 父元素下面的静态缓存变量
      */
     private JCVariableDecl metaCacheVar = null;
@@ -150,8 +155,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
     @Override
     public void visitVarDef(JCVariableDecl jcVariableDecl) {
         super.visitVarDef(jcVariableDecl);
-        // 对于用了 ZeusMethodContext.currentContext()
-        // 或者 @ZeusMethodContextVar 的变量统统进行替换
+        if (isInnerClass) {
+            return;
+        }
+        // 对于用了 FastAspectContext.currentContext()
+        // 或者 @FastAspectVar 的变量统统进行替换
         if (jcVariableDecl.toString().contains("FastAspectContext")
                 && ((jcVariableDecl.init != null
                 && jcVariableDecl.init.toString().contains("FastAspectContext.currentContext()"))
@@ -159,6 +167,13 @@ public class FastAspectTranslator extends BaseFastTranslator {
         )) {
             jcVariableDecl.init = memberAccess(CONTEXT_VAR);
         }
+    }
+
+    @Override
+    public void visitClassDef(JCClassDecl jcClassDecl) {
+        isInnerClass = true;
+        super.visitClassDef(jcClassDecl);
+        isInnerClass = false;
     }
 
     /**
@@ -169,8 +184,15 @@ public class FastAspectTranslator extends BaseFastTranslator {
     @Override
     public void visitReturn(JCReturn jcReturn) {
         super.visitReturn(jcReturn);
+        if (isInnerClass) {
+            return;
+        }
         Type returnType = ctxCompile.getReturnType();
         if (jcReturn.expr == null || returnType == null || "void".equals(returnType.toString())) {
+            return;
+        }
+        // 对于注入的 return __fast_context.getReturnVal() 不魔改
+        if (jcReturn.expr.toString().contains(CONTEXT_VAR + ".getReturnVal()")) {
             return;
         }
         // 防止重复处理
@@ -184,31 +206,28 @@ public class FastAspectTranslator extends BaseFastTranslator {
                 originExpr
         );
         jcReturn.expr = treeMaker.Conditional(treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-                treeMaker.TypeCast(
-                        returnType,
-                        treeMaker.Apply(
-                                List.nil(),
-                                treeMaker
-                                        .Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
-                                                getNameFromString("returnWrapper")),
-                                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)), originExpr)
-                        )
-                ),
+                treeMaker.TypeCast(returnType, treeMaker.Apply(
+                        List.nil(),
+                        treeMaker.Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
+                                getNameFromString("returnWrapper")),
+                        List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)), originExpr)
+                )),
                 originExpr
         );
     }
 
     /**
-     * @formatter:off <example>
+     * @formatter:off
+     * <example>
      * ..
      * catch(Throwable e){
-     * if(__fast_support){
-     * __fast_handler.errorHandle(__fast_context,e);
-     * if(__fast_context.isErrorFastReturn()){
-     * return __fast_context.getReturnVal();
-     * }
-     * }
-     * throw e;
+     *     if(__fast_support){
+     *         __fast_handler.errorHandle(__fast_context,e);
+     *     }
+     *     if(__fast_context.isErrorFastReturn()){
+     *         return __fast_context.getReturnVal();
+     *     }
+     *     throw e;
      * }
      * </example>
      * @formatter:on
