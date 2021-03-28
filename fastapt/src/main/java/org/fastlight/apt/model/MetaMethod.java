@@ -51,7 +51,6 @@ public class MetaMethod {
      */
     private MetaAnnotation[] annotations;
 
-
     /**
      * 返回获取当前方法对象，懒汉模式
      */
@@ -60,14 +59,8 @@ public class MetaMethod {
     /**
      * 构造一个方法元数据
      */
-    public static MetaMethod create(
-            Integer cacheIndex,
-            String name,
-            MetaClass metaOwner,
-            MetaParameter[] parameters,
-            MetaAnnotation[] annotations,
-            Map<String, Object> metaExtension
-    ) {
+    public static MetaMethod create(Integer cacheIndex, String name, MetaClass metaOwner, MetaParameter[] parameters,
+        MetaAnnotation[] annotations, Map<String, Object> metaExtension) {
         MetaMethod metaMethod = new MetaMethod();
         metaMethod.cacheIndex = cacheIndex;
         metaMethod.metaOwner = metaOwner;
@@ -90,7 +83,6 @@ public class MetaMethod {
     public int getCacheIndex() {
         return cacheIndex;
     }
-
 
     public boolean isStatic() {
         return isStatic;
@@ -128,7 +120,7 @@ public class MetaMethod {
                 if (!(annotation instanceof FastMarkedMethod)) {
                     continue;
                 }
-                FastMarkedMethod fastMarkedMethod = (FastMarkedMethod) annotation;
+                FastMarkedMethod fastMarkedMethod = (FastMarkedMethod)annotation;
                 if (Objects.equals(cacheIndex, fastMarkedMethod.value())) {
                     method = declaredMethod;
                     break;
@@ -137,7 +129,8 @@ public class MetaMethod {
         }
         if (method != null) {
             if (!name.equals(method.getName())) {
-                throw new RuntimeException(String.format("[FastAop] %s.%s is not match marked method %s.%s", metaOwner.getType(), name, metaOwner.getType(), method.getName()));
+                throw new RuntimeException(String.format("[FastAop] %s.%s is not match marked method %s.%s",
+                    metaOwner.getType(), name, metaOwner.getType(), method.getName()));
             }
             return method;
         }
@@ -145,8 +138,7 @@ public class MetaMethod {
     }
 
     /**
-     * 通过反射获取方法将 paramType 和 returnType 进行打补丁
-     * 因为这些TYPE 是 T[][][] 这种多维泛型数组的时候，在语法树处理上面不太好搞，这里直接捕获运行时状态，让其更加的准确
+     * 通过反射获取方法将 paramType 和 returnType 进行打补丁 因为这些TYPE 是 T[][][] 这种多维泛型数组的时候，在语法树处理上面不太好搞，这里直接捕获运行时状态，让其更加的准确
      */
     protected void patchedByReflectMethod() {
         Method method = getMethod();
@@ -162,7 +154,7 @@ public class MetaMethod {
     }
 
     public <T> T getMetaExtension(String key) {
-        //noinspection unchecked
-        return (T) metaExtensions.get(key);
+        // noinspection unchecked
+        return (T)metaExtensions.get(key);
     }
 }
