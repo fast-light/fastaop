@@ -1,5 +1,5 @@
 <div align=center>
-<img width="200px;" src="http://pan.sudoyc.com:7878/apps/files_sharing/publicpreview/5aGw56qsdoJ6XTs?x=3710&y=1192&a=true&file=logo2.png&scalingup=0"/>
+<img width="200px;" src="http://pan.sudoyc.com:7878/apps/files_sharing/publicpreview/zsW4eHSPx9DKt8P?x=3710&y=1192&a=true&file=logo.png&scalingup=0"/>
 </div>
 
 <br/>
