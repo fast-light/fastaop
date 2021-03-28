@@ -16,7 +16,7 @@ Java 高性能 AOP 框架
 
 ## 框架简介
 
-FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树 并织入切面代码从而实现了 AOP 的功能，相较于传统的
+FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树并织入切面代码从而实现了 AOP 的功能，相较于传统的
 AspectJ、Spring-AOP 框架有如下特点：
 
 1. 依赖干净，无需 Spring 等环境
@@ -42,7 +42,7 @@ AspectJ、Spring-AOP 框架有如下特点：
 
 ### 添加切面
 
-这里仅拦截了方法执行前和执行后，分别打印了入参和出参，同时输出了方法耗时，切面逻辑有如下要点：
+这里仅拦截了方法执行前和执行后，分别打印了入参和出参，同时输出了方法耗时，其关键元素如下：
 
 1. @FastAspectMark 标记切面逻辑
    
@@ -137,16 +137,17 @@ FastAspectContext 内部属性分为动态属性和静态属性，其中动态�
 
 FastAspectContext#getMetaMethod()
 
-| 属性        | 描述                                         |
-| ----------- | -------------------------------------------- |
-| cacheIndex  | 方法元数据缓存索引                           |
-| isStatic    | 是否为静态方法                               |
-| name        | 方法名字                                     |
-| returnType  | 返回类型                                     |
-| metaOwner   | 方法所在类的元数据（含类型、类上面的注解）   |
-| parameters  | 方法入参元数据（含参数名称和参数上面的注解） |
-| annotations | 方法上面的注解信息                           |
-| method      | 反射获取的方法信息，有缓存                   |
+| 属性           | 描述                                               |
+| -------------- | -------------------------------------------------- |
+| cacheIndex     | 方法元数据缓存索引                                 |
+| isStatic       | 是否为静态方法                                     |
+| name           | 方法名字                                           |
+| returnType     | 返回类型                                           |
+| metaOwner      | 方法所在类的元数据（含类型、类上面的注解）         |
+| parameters     | 方法入参元数据（含参数名称和参数上面的注解）       |
+| annotations    | 方法上面的注解信息                                 |
+| method         | 反射获取的方法信息，有缓存                         |
+| metaExtensions | 元素数据扩展，生命周期为全局，仅在当前 Method 可见 |
 
 ## 原理
 
