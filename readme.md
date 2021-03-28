@@ -147,7 +147,7 @@ FastAspectContext#getMetaMethod()
 | parameters     | 方法入参元数据（含参数名称和参数上面的注解）       |
 | annotations    | 方法上面的注解信息                                 |
 | method         | 反射获取的方法信息，有缓存                         |
-| metaExtensions | 元素数据扩展，生命周期为全局，仅在当前 Method 可见 |
+| metaExtensions | 元数据扩展，生命周期为全局，仅在当前 Method 可见 |
 
 ## 原理
 
@@ -155,7 +155,7 @@ FastAspectContext#getMetaMethod()
 
 对比 AopExample 编译前和编译后的两段代码，可以知道通过 @FastAspect 对 hello 方法进行了相关的改变，主要是在方法执行的各个生命周期回调了切面的相关接口
 
-![原理](http://pan.sudoyc.com:7878/apps/files_sharing/publicpreview/fqMTNMmHwJFa6xC?x=3710&y=1192&a=true&file=%25E5%258E%259F%25E7%2590%2586.png&scalingup=0)
+![原理](http://pan.sudoyc.com:7878/apps/files_sharing/publicpreview/xGC9DB5N9f8Ly57?x=3710&y=1192&a=true&file=%25E5%258E%259F%25E7%2590%2586.png&scalingup=0)
 
 ### 2. 切面逻辑注入
 
