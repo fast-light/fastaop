@@ -36,4 +36,9 @@ public class LogHandler implements FastAspectHandler {
                 cost
         );
     }
+
+    @Override
+    public int getOrder() {
+        return 1;
+    }
 }
