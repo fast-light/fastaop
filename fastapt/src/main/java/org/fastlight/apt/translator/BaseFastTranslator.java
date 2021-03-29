@@ -2,15 +2,13 @@ package org.fastlight.apt.translator;
 
 import com.google.auto.common.AnnotationMirrors;
 import com.google.common.collect.Lists;
-import com.sun.tools.javac.code.Attribute;
+import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Attribute.Class;
 import com.sun.tools.javac.code.Attribute.Enum;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.code.Symbol.VarSymbol;
-import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.Type.ArrayType;
 import com.sun.tools.javac.code.Type.TypeVar;
-import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.comp.Flow.AssignAnalyzer;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -38,6 +36,7 @@ import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -348,7 +347,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             }
             return treeMaker.Literal(Object.class.getName());
         }
-        // 处理泛型
+        // 处理有上下边界的泛型
         if (type instanceof TypeVar) {
             type = getTypeFromVar((TypeVar) type);
         }
@@ -360,8 +359,12 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             if (PRIMITIVE_MAP.containsKey(type.toString()) || "void".equals(type.toString())) {
                 return treeMaker.ClassLiteral(type);
             }
-            // 泛型是不会含有 package 的 . 所以可以直接返回
-            if (type.toString().contains(".")) {
+            // 处理 <T> 这种泛型
+            if (type.toString().contains("<")) {
+                return treeMaker.Literal(((Symbol.ClassSymbol) type.tsym).flatname.toString());
+            }
+            // 无 package 的类
+            if (type instanceof Type.ClassType && type.tsym instanceof Symbol.ClassSymbol) {
                 return treeMaker.ClassLiteral(type);
             }
             // 实在解析不了就返回 Object

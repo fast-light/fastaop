@@ -4,6 +4,8 @@ import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
 import org.fastlight.aop.model.FastAspectContext;
 
+import java.util.function.Supplier;
+
 /**
  * 一个简单的 FastAop 调用 demo
  *
