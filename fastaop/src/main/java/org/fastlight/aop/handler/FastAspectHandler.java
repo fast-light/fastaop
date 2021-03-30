@@ -29,13 +29,17 @@ public interface FastAspectHandler {
     /**
      * 可以改变方法的返回值，最好不要覆写该方法，请覆写 returnHandle 即可
      *
+     * @param isSupport support() 方法的返回值，主要是为了兼容当 return 是个匿名类的时候用 ? ... : ... 生成的代码会出错
      * @param ctx       方法上下文
      * @param returnVal 方法的返回值
      * @param <T>       方法返回的类型
      * @return 经过切面逻辑之后方法的返回数据
      */
     @SuppressWarnings("unchecked")
-    default <T> T returnWrapper(FastAspectContext ctx, T returnVal) {
+    default <T> T returnWrapper(boolean isSupport, FastAspectContext ctx, T returnVal) {
+        if (!isSupport) {
+            return returnVal;
+        }
         ctx.setReturnVal(returnVal);
         returnHandle(ctx);
         return (T) ctx.getReturnVal();

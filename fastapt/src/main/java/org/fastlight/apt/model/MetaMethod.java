@@ -6,6 +6,7 @@ import org.fastlight.apt.annotation.FastMarkedMethod;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 
@@ -60,7 +61,7 @@ public class MetaMethod {
      * 构造一个方法元数据
      */
     public static MetaMethod create(Integer cacheIndex, String name, MetaClass metaOwner, MetaParameter[] parameters,
-        MetaAnnotation[] annotations, Map<String, Object> metaExtension) {
+                                    MetaAnnotation[] annotations, Map<String, Object> metaExtension) {
         MetaMethod metaMethod = new MetaMethod();
         metaMethod.cacheIndex = cacheIndex;
         metaMethod.metaOwner = metaOwner;
@@ -115,26 +116,18 @@ public class MetaMethod {
         if (method != null) {
             return method;
         }
-        for (Method declaredMethod : metaOwner.getType().getDeclaredMethods()) {
-            for (Annotation annotation : declaredMethod.getAnnotations()) {
-                if (!(annotation instanceof FastMarkedMethod)) {
-                    continue;
-                }
-                FastMarkedMethod fastMarkedMethod = (FastMarkedMethod)annotation;
-                if (Objects.equals(cacheIndex, fastMarkedMethod.value())) {
-                    method = declaredMethod;
-                    break;
-                }
-            }
-        }
-        if (method != null) {
-            if (!name.equals(method.getName())) {
-                throw new RuntimeException(String.format("[FastAop] %s.%s is not match marked method %s.%s",
-                    metaOwner.getType(), name, metaOwner.getType(), method.getName()));
-            }
-            return method;
-        }
-        throw new RuntimeException(String.format("[FastAop] %s.%s not found", metaOwner.getType(), name));
+        //https://stackoverflow.com/questions/48113697/getdeclaredmethods-in-class-class
+        // isBridge() 是为了防止泛型 Override，JVM 生成多个 method 的情况
+        method = Arrays.stream(metaOwner.getType().getDeclaredMethods())
+                .filter(v -> !v.isBridge())
+                .filter(v -> Arrays.stream(v.getAnnotations()).anyMatch(m -> m.annotationType().equals(FastMarkedMethod.class)))
+                .filter(v -> v.getAnnotation(FastMarkedMethod.class).value() == cacheIndex)
+                .limit(1)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException(
+                        String.format("[FastAop] %s.%s mark index %s match failed", metaOwner.getType().getName(), name, cacheIndex)
+                ));
+        return method;
     }
 
     /**
@@ -155,6 +148,6 @@ public class MetaMethod {
 
     public <T> T getMetaExtension(String key) {
         // noinspection unchecked
-        return (T)metaExtensions.get(key);
+        return (T) metaExtensions.get(key);
     }
 }

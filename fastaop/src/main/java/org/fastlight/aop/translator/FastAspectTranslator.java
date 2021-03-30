@@ -179,7 +179,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
     /**
      * 处理包装 return，回调 handler 接口
      *
-     * @see org.fastlight.aop.handler.FastAspectHandler#returnWrapper(FastAspectContext, Object)
+     * @see org.fastlight.aop.handler.FastAspectHandler#returnWrapper(boolean, FastAspectContext, Object)
      */
     @Override
     public void visitReturn(JCReturn jcReturn) {
@@ -191,12 +191,8 @@ public class FastAspectTranslator extends BaseFastTranslator {
         if (jcReturn.expr == null || returnType == null || "void".equals(returnType.toString())) {
             return;
         }
-        // 对于注入的 return __fast_context.getReturnVal() 不魔改
-        if (jcReturn.expr.toString().contains(CONTEXT_VAR + ".getReturnVal()")) {
-            return;
-        }
         // 防止重复处理
-        if (jcReturn.expr instanceof JCConditional && jcReturn.expr.toString().contains(SUPPORT_VAR)) {
+        if (jcReturn.expr.toString().contains(CONTEXT_VAR)) {
             return;
         }
         // 对于 lambda 表达式，必须要强转，不然编译报错
@@ -204,16 +200,15 @@ public class FastAspectTranslator extends BaseFastTranslator {
                 returnType,
                 jcReturn.expr
         );
-        JCExpression wrapperExpr = treeMaker.Apply(
+        jcReturn.expr = treeMaker.Apply(
                 List.nil(),
                 treeMaker.Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
                         getNameFromString("returnWrapper")),
-                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)), castExpr)
-        );
-        // @fixme 对于 return 匿名类会报错
-        jcReturn.expr = treeMaker.Conditional(treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-                wrapperExpr,
-                castExpr
+                List.of(
+                        treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
+                        treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
+                        castExpr
+                )
         );
     }
 

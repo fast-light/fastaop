@@ -1,3 +1,4 @@
+import com.fastlight.fastaop.example.CtxAsserts;
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
 import org.fastlight.aop.model.FastAspectContext;
@@ -15,7 +16,6 @@ public class RootClassTest {
     @Test
     public void noPackage() {
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        Assert.assertNotNull(ctx);
-        Assert.assertEquals(ctx.getMetaMethod().getMetaOwner().getType(), RootClassTest.class);
+        CtxAsserts.assertEq(ctx, RootClassTest.class, "noPackage");
     }
 }

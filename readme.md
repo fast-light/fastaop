@@ -28,15 +28,16 @@ AspectJ、Spring-AOP 框架有如下特点：
 ## 使用
 
 ### 一、引入依赖
-
+如果 IDEA 报空指针，配置如下：setting->build->compiler->Shared build process VM options: -Djps.track.ap.dependencies=false
 > Maven 中央仓库还在审核，暂时先手工编译
+
 
 ```xml
 
 <dependency>
     <groupId>org.fastlight</groupId>
     <artifactId>fastaop</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 

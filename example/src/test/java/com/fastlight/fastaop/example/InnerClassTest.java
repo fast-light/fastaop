@@ -17,8 +17,7 @@ public class InnerClassTest {
     @Test
     public void test() {
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        Assert.assertNotNull(ctx);
-        Assert.assertEquals(ctx.getMetaMethod().getMetaOwner().getType(), InnerClassTest.class);
+        CtxAsserts.assertEq(ctx, InnerClassTest.class, "test");
         new InnerStatic().test();
         new InnerDynamic().test();
     }
@@ -27,8 +26,7 @@ public class InnerClassTest {
     public static class InnerStatic {
         public void test() {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            Assert.assertNotNull(ctx);
-            Assert.assertEquals(ctx.getMetaMethod().getMetaOwner().getType(), InnerStatic.class);
+            CtxAsserts.assertEq(ctx, InnerStatic.class, "test");
         }
     }
 
@@ -36,8 +34,7 @@ public class InnerClassTest {
     public class InnerDynamic {
         public void test() {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            Assert.assertNotNull(ctx);
-            Assert.assertEquals(ctx.getMetaMethod().getMetaOwner().getType(), InnerDynamic.class);
+            CtxAsserts.assertEq(ctx, InnerDynamic.class, "test");
         }
     }
 }

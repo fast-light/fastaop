@@ -6,6 +6,7 @@ import org.fastlight.aop.model.FastAspectContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.function.Supplier;
 
 /**
@@ -20,13 +21,31 @@ public class LambdaTest {
     @Test
     public void test() {
         String data = supply().get();
-        Assert.assertEquals("ok", data);
+        anonymousSupply().get();
     }
 
     public Supplier<String> supply() {
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        Assert.assertNotNull(ctx);
         Assert.assertEquals(ctx.getMetaMethod().getMetaOwner().getType(), LambdaTest.class);
+        CtxAsserts.assertEq(ctx, LambdaTest.class, "supply");
         return () -> "ok";
+    }
+
+    public Supplier<String> anonymousSupply() {
+        @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
+        CtxAsserts.assertEq(ctx, LambdaTest.class, "anonymousSupply");
+        return new Supplier<String>() {
+            @Override
+            public String get() {
+                try {
+                    // 方法内部类是不会切入的
+                    @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
+                    Assert.fail();
+                } catch (Exception ignore) {
+
+                }
+                return null;
+            }
+        };
     }
 }

@@ -62,9 +62,16 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     public static final Map<String, String> PRIMITIVE_MAP = FastMaps
-            .newHashMapWithPair("int", "java.lang.Integer", "double", "java.lang.Double", "boolean", "java.lang.Boolean",
-                    "short", "java.lang.Short", "byte", "java.lang.Byte", "char", "java.lang.Character", "float",
-                    "java.lang.Float", "long", "java.lang.Long");
+            .newHashMapWithPair(
+                    "int", "java.lang.Integer",
+                    "double", "java.lang.Double",
+                    "boolean", "java.lang.Boolean",
+                    "short", "java.lang.Short",
+                    "byte", "java.lang.Byte",
+                    "char", "java.lang.Character",
+                    "float", "java.lang.Float",
+                    "long", "java.lang.Long"
+            );
 
     public BaseFastTranslator(TreeMaker treeMaker, Name.Table names, Messager messager) {
         this.treeMaker = treeMaker;
