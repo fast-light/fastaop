@@ -30,7 +30,7 @@ AspectJ、Spring-AOP 框架有如下特点：
 ### 一、引入依赖
 1. 如果 IDEA 报空指针，配置如下：setting->build->compiler->Shared build process VM options
 > -Djps.track.ap.dependencies=false
-1. 暂时手工编译，Maven 中央仓库还未发布
+2. 暂时手工编译，Maven 中央仓库还未发布
 
 ```xml
 
