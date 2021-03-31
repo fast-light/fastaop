@@ -26,6 +26,10 @@ public class CtxAsserts {
     }
 
     public static void assertEq(FastAspectContext ctx, Class<?> ownerType, Method method, Object... args) {
+        // 静态类没有 this
+        if (ctx.getMetaMethod().isStatic()) {
+            Assert.assertNull(ctx.getThis());
+        }
         // 校验父类相等
         Assert.assertEquals(ownerType, ctx.getMetaMethod().getMetaOwner().getType());
         Assert.assertArrayEquals(args, ctx.getArgs());
