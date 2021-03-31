@@ -32,7 +32,7 @@ public class InnerClassTest {
     public static class InnerStatic {
         public void test() {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            CtxAsserts.assertEq(ctx, InnerStatic.class, new Object() {
+            CtxAsserts.assertEq(ctx, getClass(), new Object() {
                     }.getClass().getEnclosingMethod()
             );
         }
@@ -42,7 +42,7 @@ public class InnerClassTest {
          */
         public void test(Object overload) {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            CtxAsserts.assertEq(ctx, InnerStatic.class, new Object() {
+            CtxAsserts.assertEq(ctx, getClass(), new Object() {
                     }.getClass().getEnclosingMethod(), overload
             );
         }
@@ -52,7 +52,7 @@ public class InnerClassTest {
          */
         public void test(List<String> overload) {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            CtxAsserts.assertEq(ctx, InnerStatic.class, new Object() {
+            CtxAsserts.assertEq(ctx, getClass(), new Object() {
                     }.getClass().getEnclosingMethod(), overload
             );
         }
@@ -62,7 +62,7 @@ public class InnerClassTest {
     public class InnerDynamic {
         public void test() {
             @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-            CtxAsserts.assertEq(ctx, InnerDynamic.class, "test");
+            CtxAsserts.assertEq(ctx, getClass(), "test");
         }
     }
 }
