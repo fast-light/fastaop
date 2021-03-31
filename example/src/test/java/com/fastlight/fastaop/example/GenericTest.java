@@ -36,7 +36,8 @@ public class GenericTest {
                     .filter(v -> v.getName().equals("get"))
                     .collect(Collectors.toList());
             Assert.assertEquals(2, methods.size());
-            CtxAsserts.assertEq(ctx, FastList.class, "get", index);
+            CtxAsserts.assertEq(ctx, FastList.class, new Object() {
+            }.getClass().getEnclosingMethod(), index);
             return String.valueOf(index);
         }
     }

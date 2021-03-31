@@ -5,6 +5,8 @@ import org.fastlight.aop.model.FastAspectContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.Method;
+
 /**
  * 无 Package 的类测试
  *
@@ -16,6 +18,8 @@ public class RootClassTest {
     @Test
     public void noPackage() {
         @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        CtxAsserts.assertEq(ctx, RootClassTest.class, "noPackage");
+        Method method = new Object() {
+        }.getClass().getEnclosingMethod();
+        CtxAsserts.assertEq(ctx, RootClassTest.class, method);
     }
 }
