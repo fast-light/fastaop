@@ -1,6 +1,7 @@
 package org.fastlight.aop.processor;
 
 import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.translator.FastAspectTranslator;
@@ -10,6 +11,7 @@ import org.fastlight.apt.processor.BaseFastProcessor;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+
 import java.util.Optional;
 
 /**
@@ -44,11 +46,14 @@ public class FastAspectProcessor extends BaseFastProcessor<FastAspect> {
         if (translator.isMarkedMethod()) {
             return;
         }
-        // 1. 父类元素添加静态缓存变量
-        translator.addCacheVar(javacTrees.getTree(ownerElement));
-        // 2. 方法内部织入切面代码
+        JCClassDecl ownerClass = javacTrees.getTree(ownerElement);
+        // 1. 添加类元数据缓存
+        translator.addMetaOwnerVar(ownerClass);
+        // 2. 添加方法元数据缓存
+        translator.addMetaMethodVar(ownerClass);
+        // 3. 方法内部织入切面代码
         translator.weaveMethod();
-        // 3. 处理 return 和 局部变量
+        // 4. 处理 return 和 局部变量
         jcMethodDecl.accept(translator);
     }
 

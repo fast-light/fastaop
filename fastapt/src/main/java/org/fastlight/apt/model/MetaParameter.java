@@ -1,7 +1,5 @@
 package org.fastlight.apt.model;
 
-import org.fastlight.apt.util.ReflectUtils;
-
 /**
  * @author ychost@outlook.com
  * @date 2021-03-27
@@ -33,9 +31,7 @@ public class MetaParameter {
     public static MetaParameter create(String name, Object type, MetaAnnotation[] annotations) {
         MetaParameter parameter = new MetaParameter();
         if (type instanceof Class) {
-            parameter.type = (Class<?>) type;
-        } else {
-            parameter.type = ReflectUtils.forNameCache(type.toString());
+            parameter.type = (Class<?>)type;
         }
         parameter.name = name;
         parameter.annotations = annotations;
@@ -53,5 +49,9 @@ public class MetaParameter {
     // 由于注入的 type 不是很准确，所以在 method 里面通过反射来赋值
     void setType(Class<?> type) {
         this.type = type;
+    }
+
+    public MetaAnnotation[] getAnnotations() {
+        return annotations;
     }
 }

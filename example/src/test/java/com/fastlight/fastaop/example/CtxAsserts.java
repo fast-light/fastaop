@@ -18,10 +18,10 @@ public class CtxAsserts {
     public static void assertEq(FastAspectContext ctx, Class<?> ownerType, String methodName, Object... args) {
         // 校验方法正确
         Method method = Arrays.stream(ownerType.getDeclaredMethods()).filter(v -> !v.isBridge())
-                .filter(v -> Objects.equals(methodName, v.getName()))
-                .limit(1)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("not found method " + ownerType.getName() + "." + methodName));
+            .filter(v -> Objects.equals(methodName, v.getName()))
+            .limit(1)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("not found method " + ownerType.getName() + "." + methodName));
         assertEq(ctx, ownerType, method, args);
     }
 
@@ -30,8 +30,8 @@ public class CtxAsserts {
         if (ctx.getMetaMethod().isStatic()) {
             Assert.assertNull(ctx.getThis());
         }
-        // 校验父类相等
-        Assert.assertEquals(ownerType, ctx.getMetaMethod().getMetaOwner().getType());
+        // 对于生成的匿名类，其 ownerType 为子类
+        Assert.assertTrue(ctx.getMetaMethod().getMetaOwner().getType().isAssignableFrom(ownerType));
         Assert.assertArrayEquals(args, ctx.getArgs());
         Assert.assertEquals(method, ctx.getMetaMethod().getMethod());
     }

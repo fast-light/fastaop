@@ -20,20 +20,17 @@ public class LogHandler implements FastAspectHandler {
     @Override
     public void preHandle(FastAspectContext ctx) {
         ctx.addExtension(START_MS, System.currentTimeMillis());
-        System.out.printf("[preHandle] [%s.%s] [input]==> %s \n",
-                ctx.getMetaMethod().getMetaOwner().getType(),
-                ctx.getMetaMethod().getName(), ctx.getParamMap()
+        System.out.printf("[Start Invoking] %s.%s\n",
+            ctx.getMetaMethod().getMetaOwner().getType().getName(),
+            ctx.getMetaMethod().getName()
         );
     }
 
     @Override
     public void postHandle(FastAspectContext ctx) {
-        Long cost = System.currentTimeMillis() - (Long) ctx.getExtension(START_MS);
-        System.out.printf("[postHandle] [%s.%s] [output]==> %s [cost]==> %sms \n",
-                ctx.getMetaMethod().getMetaOwner().getType(),
-                ctx.getMetaMethod().getName(),
-                ctx.getReturnVal(),
-                cost
+        System.out.printf("[Invoke Completed] %s.%s\n",
+            ctx.getMetaMethod().getMetaOwner().getType().getName(),
+            ctx.getMetaMethod().getName()
         );
     }
 

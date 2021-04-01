@@ -12,13 +12,14 @@ import org.fastlight.aop.model.FastAspectContext;
  */
 public class AopExample {
     public static void main(String[] args) {
-        System.out.println("==>invoked: " + hello("[FastAop]"));
+        String fastAop = hello("[FastAop]");
+        System.out.println("hello: " + fastAop);
     }
 
     @FastAspect
     public static String hello(String name) {
-        System.out.println("[hello] [input]==> " + name);
-        @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        return "hello-->>" + ctx.getArgs()[0] + "eq(" + (ctx.getArgs()[0] == name) + ")";
+        @FastAspectVar
+        FastAspectContext ctx = FastAspectContext.currentContext();
+        return String.valueOf(ctx.getArgs()[0]);
     }
 }

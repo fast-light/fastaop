@@ -1,10 +1,21 @@
 package org.fastlight.aop.translator;
 
-import com.sun.tools.javac.code.Flags;
+import java.util.Optional;
+
+import javax.annotation.processing.Messager;
+
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.TypeTag;
-import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.JCTree.JCAnnotation;
+import com.sun.tools.javac.tree.JCTree.JCClassDecl;
+import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
+import com.sun.tools.javac.tree.JCTree.JCIdent;
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
+import com.sun.tools.javac.tree.JCTree.JCNewArray;
+import com.sun.tools.javac.tree.JCTree.JCReturn;
+import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
@@ -14,11 +25,6 @@ import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.translator.BaseFastTranslator;
-
-import javax.annotation.processing.Messager;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.PackageElement;
-import java.util.Optional;
 
 /**
  * @author ychost
@@ -34,7 +40,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
 
     public static final String SUPPORT_VAR = "__fast_support";
 
-    public static final String META_CACHE_VAR = "__fast_meta_cache";
+    public static final String META_METHOD_VAR = "__fast_meta_method";
 
     /**
      * 当前 visit 的是否为内部类，可避免对方法内部匿名类的切入
@@ -44,14 +50,13 @@ public class FastAspectTranslator extends BaseFastTranslator {
     /**
      * 父元素下面的静态缓存变量
      */
-    private JCVariableDecl metaCacheVar = null;
-
+    private JCVariableDecl metaMethodVar = null;
 
     /**
      * 初始化注入相关元素
      */
     public FastAspectTranslator(TreeMaker treeMaker,
-                                Table names, Messager messager) {
+        Table names, Messager messager) {
         super(treeMaker, names, messager);
     }
 
@@ -83,7 +88,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
             return;
         }
         Integer methodIndex = addMetaCache();
-        markCacheAnnotation(methodIndex);
+        markMetaMethodAnnotation(methodIndex);
         JCVariableDecl ctxVar = newContextVar(methodIndex);
         JCVariableDecl handleVar = handleVar(ctxVar);
         ListBuffer<JCStatement> ctxStatements = new ListBuffer<>();
@@ -92,59 +97,43 @@ public class FastAspectTranslator extends BaseFastTranslator {
         ctxStatements.add(supportVar(handleVar));
         ctxStatements.add(preHandleStatement(handleVar));
         changeMethodDefine(jcMethodDecl, statements -> {
-                    JCStatement bodyStatement = injectTryCatchFinally(
-                            statements,
-                            null,
-                            errorHandleStatement(handleVar),
-                            postHandleStatement(handleVar),
-                            Throwable.class.getName(),
-                            EXCEPTION_VAR,
-                            true,
-                            jcMethodDecl.pos
-                    );
-                    ctxStatements.add(bodyStatement);
-                    return ctxStatements.toList();
-                }
+                JCStatement bodyStatement = injectTryCatchFinally(
+                    statements,
+                    null,
+                    errorHandleStatement(handleVar),
+                    postHandleStatement(handleVar),
+                    Throwable.class.getName(),
+                    EXCEPTION_VAR,
+                    true,
+                    jcMethodDecl.pos
+                );
+                ctxStatements.add(bodyStatement);
+                return ctxStatements.toList();
+            }
         );
     }
 
-
     /**
-     * 添加 __fast_meta_cache 变量
+     * 添加 __fast_meta_method 变量
      */
-    public void addCacheVar(JCClassDecl jcClassDecl) {
-        for (JCTree def : jcClassDecl.defs) {
-            if (def instanceof JCVariableDecl && META_CACHE_VAR.equals(((JCVariableDecl) def).name.toString())) {
-                metaCacheVar = (JCVariableDecl) def;
-                break;
-            }
-        }
-        if (metaCacheVar != null) {
+    public void addMetaMethodVar(JCClassDecl jcClassDecl) {
+        metaMethodVar = getVar(jcClassDecl.defs, META_METHOD_VAR);
+        if (metaMethodVar != null) {
             return;
         }
         JCExpression newArray = treeMaker.NewArray(
-                memberAccess(MetaMethod.class.getName()),
-                List.nil(),
-                List.nil()
+            memberAccess(MetaMethod.class.getName()),
+            List.nil(),
+            List.nil()
         );
-        // 非静态内部类不能加 static
-        long modifiers = Flags.PRIVATE;
-        boolean isInnerClass = !(ctxCompile.getOwnerElement().getEnclosingElement() instanceof PackageElement);
-        boolean isStaticClass = ctxCompile.getOwnerElement().getModifiers().contains(Modifier.STATIC);
-        if (!isInnerClass || isStaticClass) {
-            modifiers = modifiers | Flags.STATIC;
-        }
         // 添加 变量定义
-        metaCacheVar = treeMaker.VarDef(
-                treeMaker.Modifiers(modifiers),
-                getNameFromString(META_CACHE_VAR),
-                treeMaker.TypeArray(memberAccess(MetaMethod.class.getName())),
-                newArray
+        metaMethodVar = treeMaker.VarDef(
+            treeMaker.Modifiers(getClassFinalModifiers()),
+            getNameFromString(META_METHOD_VAR),
+            treeMaker.TypeArray(memberAccess(MetaMethod.class.getName())),
+            newArray
         );
-        ListBuffer<JCTree> defs = new ListBuffer<>();
-        defs.addAll(jcClassDecl.defs);
-        defs.add(metaCacheVar);
-        jcClassDecl.defs = defs.toList();
+        addClassVar(jcClassDecl, metaMethodVar);
     }
 
     /**
@@ -161,9 +150,9 @@ public class FastAspectTranslator extends BaseFastTranslator {
         // 对于用了 FastAspectContext.currentContext()
         // 或者 @FastAspectVar 的变量统统进行替换
         if (jcVariableDecl.toString().contains("FastAspectContext")
-                && ((jcVariableDecl.init != null
-                && jcVariableDecl.init.toString().contains("FastAspectContext.currentContext()"))
-                || jcVariableDecl.toString().contains(FastAspectVar.class.getSimpleName())
+            && ((jcVariableDecl.init != null
+            && jcVariableDecl.init.toString().contains("FastAspectContext.currentContext()"))
+            || jcVariableDecl.toString().contains(FastAspectVar.class.getSimpleName())
         )) {
             jcVariableDecl.init = memberAccess(CONTEXT_VAR);
         }
@@ -197,18 +186,18 @@ public class FastAspectTranslator extends BaseFastTranslator {
         }
         // 对于 lambda 表达式，必须要强转，不然编译报错
         JCExpression castExpr = treeMaker.TypeCast(
-                returnType,
-                jcReturn.expr
+            returnType,
+            jcReturn.expr
         );
         jcReturn.expr = treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
-                        getNameFromString("returnWrapper")),
-                List.of(
-                        treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-                        treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                        castExpr
-                )
+            List.nil(),
+            treeMaker.Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
+                getNameFromString("returnWrapper")),
+            List.of(
+                treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
+                treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
+                castExpr
+            )
         );
     }
 
@@ -234,33 +223,33 @@ public class FastAspectTranslator extends BaseFastTranslator {
         // void 直接 return
         JCReturn jcReturn = getReturn();
         JCExpression isFastReturn = treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                        getNameFromString("isFastReturn")),
-                List.nil()
+            List.nil(),
+            treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
+                getNameFromString("isFastReturn")),
+            List.nil()
         );
         JCIdent ifSupport = treeMaker.Ident(getNameFromString(SUPPORT_VAR));
         JCStatement errorHandleExec = treeMaker.Exec(
-                treeMaker.Apply(
-                        List.nil(),
-                        treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("errorHandle")),
-                        List.of(
-                                treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                                treeMaker.Ident(getNameFromString(EXCEPTION_VAR))
-                        )
+            treeMaker.Apply(
+                List.nil(),
+                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("errorHandle")),
+                List.of(
+                    treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
+                    treeMaker.Ident(getNameFromString(EXCEPTION_VAR))
                 )
+            )
         );
         return treeMaker.If(
-                ifSupport,
-                treeMaker.Block(0, List.of(
-                        errorHandleExec,
-                        treeMaker.If(
-                                isFastReturn,
-                                jcReturn,
-                                null)
-                        )
-                ),
-                null
+            ifSupport,
+            treeMaker.Block(0, List.of(
+                errorHandleExec,
+                treeMaker.If(
+                    isFastReturn,
+                    jcReturn,
+                    null)
+                )
+            ),
+            null
         );
     }
 
@@ -273,15 +262,15 @@ public class FastAspectTranslator extends BaseFastTranslator {
             return jcReturn;
         }
         jcReturn = treeMaker.Return(
-                treeMaker.TypeCast(ctxCompile.getReturnType(),
-                        treeMaker.Apply(
-                                List.nil(),
-                                treeMaker.Select(
-                                        treeMaker.Ident(getNameFromString(CONTEXT_VAR)), getNameFromString("getReturnVal")
-                                ),
-                                List.nil()
-                        )
+            treeMaker.TypeCast(ctxCompile.getReturnType(),
+                treeMaker.Apply(
+                    List.nil(),
+                    treeMaker.Select(
+                        treeMaker.Ident(getNameFromString(CONTEXT_VAR)), getNameFromString("getReturnVal")
+                    ),
+                    List.nil()
                 )
+            )
         );
         return jcReturn;
     }
@@ -303,39 +292,39 @@ public class FastAspectTranslator extends BaseFastTranslator {
      */
     protected JCStatement preHandleStatement(JCVariableDecl handleVar) {
         JCExpressionStatement preHandleExec = treeMaker.Exec(
-                treeMaker.Apply(
-                        List.nil(),
-                        treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("preHandle")),
-                        List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-                )
+            treeMaker.Apply(
+                List.nil(),
+                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("preHandle")),
+                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
+            )
         );
         JCIdent ifSupport = treeMaker.Ident(getNameFromString(SUPPORT_VAR));
         if (ctxCompile.getReturnType() == null) {
             return treeMaker.If(
-                    ifSupport,
-                    preHandleExec,
-                    null
+                ifSupport,
+                preHandleExec,
+                null
             );
         }
         // void 直接 return
         JCReturn jcReturn = getReturn();
         JCExpression isFastReturn = treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                        getNameFromString("isFastReturn")),
-                List.nil()
+            List.nil(),
+            treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
+                getNameFromString("isFastReturn")),
+            List.nil()
         );
         return treeMaker.If(
-                ifSupport,
-                treeMaker.Block(0, List.of(
-                        preHandleExec,
-                        treeMaker.If(
-                                isFastReturn,
-                                jcReturn,
-                                null
-                        )
-                )),
-                null
+            ifSupport,
+            treeMaker.Block(0, List.of(
+                preHandleExec,
+                treeMaker.If(
+                    isFastReturn,
+                    jcReturn,
+                    null
+                )
+            )),
+            null
         );
     }
 
@@ -344,14 +333,14 @@ public class FastAspectTranslator extends BaseFastTranslator {
      */
     protected JCVariableDecl supportVar(JCVariableDecl handleVar) {
         return treeMaker.VarDef(
-                treeMaker.Modifiers(0),
-                getNameFromString(SUPPORT_VAR),
-                treeMaker.TypeIdent(TypeTag.BOOLEAN),
-                treeMaker.Apply(
-                        List.nil(),
-                        treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("support")),
-                        List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-                )
+            treeMaker.Modifiers(0),
+            getNameFromString(SUPPORT_VAR),
+            treeMaker.TypeIdent(TypeTag.BOOLEAN),
+            treeMaker.Apply(
+                List.nil(),
+                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("support")),
+                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
+            )
         );
     }
 
@@ -360,14 +349,14 @@ public class FastAspectTranslator extends BaseFastTranslator {
      */
     protected JCStatement postHandleStatement(JCVariableDecl handleVar) {
         return treeMaker.If(
-                treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-                treeMaker.Exec(
-                        treeMaker.Apply(
-                                List.nil(),
-                                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("postHandle")),
-                                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-                        )
-                ), null
+            treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
+            treeMaker.Exec(
+                treeMaker.Apply(
+                    List.nil(),
+                    treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("postHandle")),
+                    List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
+                )
+            ), null
         );
     }
 
@@ -376,14 +365,14 @@ public class FastAspectTranslator extends BaseFastTranslator {
      */
     protected JCVariableDecl handleVar(JCVariableDecl ctxVar) {
         JCExpression expression = treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(ctxVar.getName()), getNameFromString("buildHandler")),
-                List.nil()
+            List.nil(),
+            treeMaker.Select(treeMaker.Ident(ctxVar.getName()), getNameFromString("buildHandler")),
+            List.nil()
         );
         return treeMaker.VarDef(treeMaker.Modifiers(0),
-                getNameFromString(HANDLER_VAR),
-                memberAccess(FastAspectHandler.class.getName()),
-                expression
+            getNameFromString(HANDLER_VAR),
+            memberAccess(FastAspectHandler.class.getName()),
+            expression
         );
     }
 
@@ -391,7 +380,7 @@ public class FastAspectTranslator extends BaseFastTranslator {
      * 将当前 method 的元元数据进行缓存
      */
     protected Integer addMetaCache() {
-        JCNewArray originInit = (JCNewArray) metaCacheVar.init;
+        JCNewArray originInit = (JCNewArray)metaMethodVar.init;
         List<JCExpression> elements = originInit.elems;
         ListBuffer<JCExpression> newElements = new ListBuffer<>();
         newElements.addAll(elements);
@@ -400,21 +389,20 @@ public class FastAspectTranslator extends BaseFastTranslator {
         return newElements.size() - 1;
     }
 
-
     /**
      * @see FastAspectContext#create(MetaMethod, Object, Object[])
      */
     protected JCVariableDecl newContextVar(Integer methodIndex) {
-        JCExpression metaExpression = treeMaker.Indexed(memberAccess(META_CACHE_VAR), treeMaker.Literal(methodIndex));
+        JCExpression metaExpression = treeMaker.Indexed(memberAccess(META_METHOD_VAR), treeMaker.Literal(methodIndex));
         return treeMaker.VarDef(
-                treeMaker.Modifiers(0),
-                getNameFromString(CONTEXT_VAR),
-                memberAccess(FastAspectContext.class.getName()),
-                treeMaker.Apply(
-                        List.nil(),
-                        memberAccess(getCreateMethod(FastAspectContext.class)),
-                        List.of(metaExpression, ownerExpression(), argsExpression(ctxCompile.getMethodDecl()))
-                )
+            treeMaker.Modifiers(0),
+            getNameFromString(CONTEXT_VAR),
+            memberAccess(FastAspectContext.class.getName()),
+            treeMaker.Apply(
+                List.nil(),
+                memberAccess(getCreateMethod(FastAspectContext.class)),
+                List.of(metaExpression, ownerExpression(), argsExpression(ctxCompile.getMethodDecl()))
+            )
         );
     }
 
@@ -424,12 +412,11 @@ public class FastAspectTranslator extends BaseFastTranslator {
     @Override
     protected JCExpression metaExtensionExpression() {
         return treeMaker.Apply(
-                List.nil(),
-                newMapMethod,
-                List.of(treeMaker.Literal(FastAspectContext.EXT_META_BUILDER_CLASS), builderExpression())
+            List.nil(),
+            newMapMethod,
+            List.of(treeMaker.Literal(FastAspectContext.EXT_META_BUILDER_CLASS), builderExpression())
         );
     }
-
 
     /**
      * @see MetaMethod#getMetaExtension(String)
@@ -438,6 +425,5 @@ public class FastAspectTranslator extends BaseFastTranslator {
         Type builder = ctxCompile.getExtension("builder");
         return treeMaker.ClassLiteral(builder);
     }
-
 
 }

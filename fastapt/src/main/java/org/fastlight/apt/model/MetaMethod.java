@@ -3,12 +3,10 @@ package org.fastlight.apt.model;
 import com.google.common.collect.Maps;
 import org.fastlight.apt.annotation.FastMarkedMethod;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 方法元数据
@@ -18,7 +16,7 @@ import java.util.Objects;
  */
 public class MetaMethod {
     /**
-     * 该元素在静态 meta_cache 的缓存索引
+     * 该元素在静态 __fast_meta_method 的缓存索引
      */
     private int cacheIndex;
 
@@ -40,7 +38,7 @@ public class MetaMethod {
     /**
      * 方法所在类的元数据
      */
-    private MetaClass metaOwner;
+    private MetaType metaOwner;
 
     /**
      * 方法参数
@@ -60,12 +58,11 @@ public class MetaMethod {
     /**
      * 构造一个方法元数据
      */
-    public static MetaMethod create(Integer cacheIndex, String name, MetaClass metaOwner, MetaParameter[] parameters,
-                                    MetaAnnotation[] annotations, Map<String, Object> metaExtension) {
+    public static MetaMethod create(Integer cacheIndex, MetaType metaOwner, MetaParameter[] parameters,
+        MetaAnnotation[] annotations, Map<String, Object> metaExtension) {
         MetaMethod metaMethod = new MetaMethod();
         metaMethod.cacheIndex = cacheIndex;
         metaMethod.metaOwner = metaOwner;
-        metaMethod.name = name;
         metaMethod.parameters = parameters;
         metaMethod.annotations = annotations;
         if (metaExtension != null && metaExtension.size() > 0) {
@@ -97,7 +94,7 @@ public class MetaMethod {
         return returnType;
     }
 
-    public MetaClass getMetaOwner() {
+    public MetaType getMetaOwner() {
         return metaOwner;
     }
 
@@ -119,14 +116,16 @@ public class MetaMethod {
         //https://stackoverflow.com/questions/48113697/getdeclaredmethods-in-class-class
         // isBridge() 是为了防止泛型 Override，JVM 生成多个 method 的情况
         method = Arrays.stream(metaOwner.getType().getDeclaredMethods())
-                .filter(v -> !v.isBridge())
-                .filter(v -> Arrays.stream(v.getAnnotations()).anyMatch(m -> m.annotationType().equals(FastMarkedMethod.class)))
-                .filter(v -> v.getAnnotation(FastMarkedMethod.class).value() == cacheIndex)
-                .limit(1)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException(
-                        String.format("[FastAop] %s.%s mark index %s match failed", metaOwner.getType().getName(), name, cacheIndex)
-                ));
+            .filter(v -> !v.isBridge())
+            .filter(
+                v -> Arrays.stream(v.getAnnotations()).anyMatch(m -> m.annotationType().equals(FastMarkedMethod.class)))
+            .filter(v -> v.getAnnotation(FastMarkedMethod.class).value() == cacheIndex)
+            .limit(1)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException(
+                String.format("[FastAop] %s.%s mark index %s match failed", metaOwner.getType().getName(), name,
+                    cacheIndex)
+            ));
         return method;
     }
 
@@ -140,6 +139,7 @@ public class MetaMethod {
         }
         returnType = method.getReturnType();
         isStatic = Modifier.isStatic(method.getModifiers());
+        name = method.getName();
     }
 
     public void addMetaExtension(String key, Object value) {
@@ -148,6 +148,6 @@ public class MetaMethod {
 
     public <T> T getMetaExtension(String key) {
         // noinspection unchecked
-        return (T) metaExtensions.get(key);
+        return (T)metaExtensions.get(key);
     }
 }

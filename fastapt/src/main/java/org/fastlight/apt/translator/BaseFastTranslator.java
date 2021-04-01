@@ -1,43 +1,63 @@
 package org.fastlight.apt.translator;
 
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+
+import javax.annotation.processing.Messager;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.PackageElement;
+import javax.tools.Diagnostic;
+import javax.tools.Diagnostic.Kind;
+
 import com.google.auto.common.AnnotationMirrors;
 import com.google.common.collect.Lists;
-import com.sun.tools.javac.code.*;
+import com.sun.tools.javac.code.Attribute;
 import com.sun.tools.javac.code.Attribute.Class;
 import com.sun.tools.javac.code.Attribute.Enum;
+import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.code.Symbol.VarSymbol;
+import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.Type.ArrayType;
 import com.sun.tools.javac.code.Type.TypeVar;
+import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.comp.Flow.AssignAnalyzer;
 import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.JCTree.JCAnnotation;
+import com.sun.tools.javac.tree.JCTree.JCCatch;
+import com.sun.tools.javac.tree.JCTree.JCClassDecl;
+import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
+import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
+import com.sun.tools.javac.tree.JCTree.JCIdent;
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
+import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
+import com.sun.tools.javac.tree.JCTree.JCModifiers;
+import com.sun.tools.javac.tree.JCTree.JCNewClass;
+import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCThrow;
+import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Pair;
+import org.apache.commons.lang3.StringUtils;
 import org.fastlight.apt.annotation.FastMarkedMethod;
 import org.fastlight.apt.model.MetaAnnotation;
-import org.fastlight.apt.model.MetaClass;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.model.MetaParameter;
+import org.fastlight.apt.model.MetaType;
 import org.fastlight.apt.model.compile.AnnotationCompile;
 import org.fastlight.apt.model.compile.MethodCompile;
 import org.fastlight.apt.model.compile.ParameterCompile;
 import org.fastlight.apt.util.FastCollections;
 import org.fastlight.apt.util.FastMaps;
-
-import javax.annotation.processing.Messager;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Modifier;
-import javax.tools.Diagnostic;
-import javax.tools.Diagnostic.Kind;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * 基础的语法树的一些操作方法
@@ -57,21 +77,23 @@ public abstract class BaseFastTranslator extends TreeTranslator {
 
     protected MethodCompile ctxCompile;
 
+    public static final String META_OWNER_VAR = "__fast_meta_owner";
+
     public void init(MethodCompile ctxCompile) {
         this.ctxCompile = ctxCompile;
     }
 
     public static final Map<String, String> PRIMITIVE_MAP = FastMaps
-            .newHashMapWithPair(
-                    "int", "java.lang.Integer",
-                    "double", "java.lang.Double",
-                    "boolean", "java.lang.Boolean",
-                    "short", "java.lang.Short",
-                    "byte", "java.lang.Byte",
-                    "char", "java.lang.Character",
-                    "float", "java.lang.Float",
-                    "long", "java.lang.Long"
-            );
+        .newHashMapWithPair(
+            "int", "java.lang.Integer",
+            "double", "java.lang.Double",
+            "boolean", "java.lang.Boolean",
+            "short", "java.lang.Short",
+            "byte", "java.lang.Byte",
+            "char", "java.lang.Character",
+            "float", "java.lang.Float",
+            "long", "java.lang.Long"
+        );
 
     public BaseFastTranslator(TreeMaker treeMaker, Name.Table names, Messager messager) {
         this.treeMaker = treeMaker;
@@ -105,14 +127,14 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     /**
      * 方法上面添加 @FastAspectMethod 方便在运行的时候精确获取 Method
      *
-     * @param methodIndex 方法在 meta_cache 中的索引
+     * @param methodIndex 方法在 __fast_meta_method 中的索引
      */
-    protected void markCacheAnnotation(Integer methodIndex) {
+    protected void markMetaMethodAnnotation(Integer methodIndex) {
         if (isMarkedMethod()) {
             return;
         }
         JCAnnotation annotation = treeMaker.Annotation(memberAccess(FastMarkedMethod.class.getName()),
-                List.of(treeMaker.Assign(memberAccess("value"), treeMaker.Literal(methodIndex)))
+            List.of(treeMaker.Assign(memberAccess("value"), treeMaker.Literal(methodIndex)))
         );
         ListBuffer<JCAnnotation> annotations = new ListBuffer<>();
         annotations.addAll(ctxCompile.getMethodDecl().mods.annotations);
@@ -125,7 +147,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     public boolean isMarkedMethod() {
         return ctxCompile.getMethodDecl().mods.annotations.stream().filter(v -> v.type != null)
-                .anyMatch(v -> v.type.toString().equals(FastMarkedMethod.class.getName()));
+            .anyMatch(v -> v.type.toString().equals(FastMarkedMethod.class.getName()));
     }
 
     /**
@@ -137,13 +159,14 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * @param finallyStatement    添加 finally 一行语句
      * @param catchExceptionClass catch 的 Exception 类名
      * @param catchVarName        catch 的变量名
-     * @param startPos            {@link AssignAnalyzer#visitVarDef(com.sun.tools.javac.tree.JCTree.JCVariableDecl)} 里面的 trackback 会判断大于
+     * @param startPos            {@link AssignAnalyzer#visitVarDef(com.sun.tools.javac.tree.JCTree.JCVariableDecl)} 里面的
+     *                            trackback 会判断大于
      *                            startPos 才会对 jcvariable 初始化生效，主要fix catch 变量
      * @param throwError          catch 住了异常之后是否继续往上面抛，默认 true
      */
     protected JCStatement injectTryCatchFinally(List<JCStatement> bodyStatements, JCStatement tryStatement,
-                                                JCStatement catchStatement, JCStatement finallyStatement, String catchExceptionClass, String catchVarName,
-                                                Boolean throwError, int startPos) {
+        JCStatement catchStatement, JCStatement finallyStatement, String catchExceptionClass, String catchVarName,
+        Boolean throwError, int startPos) {
         // 注入 try 里面的语句
         if (tryStatement != null) {
             bodyStatements = injectStart(bodyStatements, tryStatement);
@@ -157,8 +180,8 @@ public abstract class BaseFastTranslator extends TreeTranslator {
                 catchStatements = catchStatements.append(jcThrow);
             }
             JCVariableDecl catchVar = treeMaker
-                    .VarDef(treeMaker.Modifiers(0), getNameFromString(catchVarName), memberAccess(catchExceptionClass),
-                            null);
+                .VarDef(treeMaker.Modifiers(0), getNameFromString(catchVarName), memberAccess(catchExceptionClass),
+                    null);
             // 很重要！，坑了整整两天，找遍全网，最后 debug 源码才发现
             // @see com.sun.tools.javac.comp.Flow.AssignAnalyzer.visitVarDef
             catchVar.pos = startPos + 1;
@@ -217,7 +240,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected List<JCStatement> injectFinally(List<JCStatement> bodyStatements, JCStatement injectStatement) {
         JCStatement statement =
-                injectTryCatchFinally(bodyStatements, null, null, injectStatement, null, null, true, -1);
+            injectTryCatchFinally(bodyStatements, null, null, injectStatement, null, null, true, -1);
         return List.of(statement);
     }
 
@@ -244,16 +267,16 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         if (!(statement instanceof JCExpressionStatement)) {
             return false;
         }
-        JCExpression expr = ((JCExpressionStatement) statement).expr;
+        JCExpression expr = ((JCExpressionStatement)statement).expr;
         if (!(expr instanceof JCMethodInvocation)) {
             return false;
         }
-        JCExpression invocation = ((JCMethodInvocation) expr).meth;
+        JCExpression invocation = ((JCMethodInvocation)expr).meth;
         String name;
         if (invocation instanceof JCFieldAccess) {
-            name = ((JCFieldAccess) invocation).name.toString();
+            name = ((JCFieldAccess)invocation).name.toString();
         } else if (invocation instanceof JCIdent) {
-            name = ((JCIdent) invocation).name.toString();
+            name = ((JCIdent)invocation).name.toString();
         } else {
             name = "";
         }
@@ -268,7 +291,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * @param define       定义语句
      */
     protected void changeMethodDefine(JCMethodDecl jcMethodDecl,
-                                      Function<List<JCStatement>, List<JCStatement>> define) {
+        Function<List<JCStatement>, List<JCStatement>> define) {
         super.visitMethodDef(jcMethodDecl);
         // abstract 或者 interface 不支持切入
         if (jcMethodDecl.body == null) {
@@ -299,7 +322,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected JCExpressionStatement stringValueOf(JCExpression expression) {
         return treeMaker
-                .Exec(treeMaker.Apply(List.nil(), memberAccess("java.lang.String.valueOf"), List.of(expression)));
+            .Exec(treeMaker.Apply(List.nil(), memberAccess("java.lang.String.valueOf"), List.of(expression)));
     }
 
     /**
@@ -313,14 +336,14 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         }
         JCMethodInvocation args = treeMaker.Apply(List.nil(), newMapMethod, argsExpressions.toList());
         return treeMaker
-                .Apply(List.nil(), createAnnotationMethod, List.of(treeMaker.ClassLiteral(annotation.getType()), args));
+            .Apply(List.nil(), createAnnotationMethod, List.of(treeMaker.ClassLiteral(annotation.getType()), args));
     }
 
     /**
      * annotationMirrors -> MetaAnnotation[] expression，支持 defaultValue
      */
     protected JCExpression createAnnotationArrayExpression(
-            java.util.List<? extends AnnotationMirror> annotationMirrors) {
+        java.util.List<? extends AnnotationMirror> annotationMirrors) {
         if (FastCollections.isEmpty(annotationMirrors)) {
             return treeMaker.NewArray(memberAccess(MetaAnnotation.class.getName()), List.nil(), List.nil());
         }
@@ -329,9 +352,9 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         for (AnnotationMirror annotation : annotationMirrors) {
             AnnotationCompile annotationCompile = new AnnotationCompile();
             annotationCompile.setInfos(Lists.newArrayList());
-            annotationCompile.setType((Type) annotation.getAnnotationType());
+            annotationCompile.setType((Type)annotation.getAnnotationType());
             AnnotationMirrors.getAnnotationValuesWithDefaults(annotation).forEach((k, v) -> {
-                MethodSymbol symbol = (MethodSymbol) k;
+                MethodSymbol symbol = (MethodSymbol)k;
                 AnnotationCompile.AnnotationInfo info = new AnnotationCompile.AnnotationInfo();
                 info.setName(k.getSimpleName().toString());
                 info.setValue(v.getValue());
@@ -348,7 +371,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected JCExpression classLiteral(Type type) {
         if (type instanceof ArrayType) {
-            ArrayType arrayType = (ArrayType) type;
+            ArrayType arrayType = (ArrayType)type;
             if (arrayType.elemtype.tsym.erasure_field != null) {
                 return treeMaker.ClassLiteral(type);
             }
@@ -356,7 +379,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
         }
         // 处理有上下边界的泛型
         if (type instanceof TypeVar) {
-            type = getTypeFromVar((TypeVar) type);
+            type = getTypeFromVar((TypeVar)type);
         }
         if (type == null) {
             return treeMaker.Literal(Object.class.getName());
@@ -368,7 +391,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             }
             // 处理 <T> 这种泛型
             if (type.toString().contains("<")) {
-                return treeMaker.Literal(((Symbol.ClassSymbol) type.tsym).flatname.toString());
+                return treeMaker.Literal(((Symbol.ClassSymbol)type.tsym).flatname.toString());
             }
             // 无 package 的类
             if (type instanceof Type.ClassType && type.tsym instanceof Symbol.ClassSymbol) {
@@ -385,7 +408,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             return null;
         }
         if (typeVar.bound instanceof TypeVar) {
-            return getTypeFromVar((TypeVar) typeVar.bound);
+            return getTypeFromVar((TypeVar)typeVar.bound);
         }
         return typeVar.bound;
     }
@@ -428,7 +451,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             JCExpression atCreate = createAnnotationArrayExpression(param.getAnnotationMirrors());
             JCExpression clsExpression = classLiteral(param.type);
             JCExpression paramExpression = treeMaker.Apply(List.nil(), createParamMethod,
-                    List.of(treeMaker.Literal(param.getSimpleName().toString()), clsExpression, atCreate));
+                List.of(treeMaker.Literal(param.getSimpleName().toString()), clsExpression, atCreate));
             paramsExpression.add(paramExpression);
         }
         return treeMaker.NewArray(memberAccess(MetaParameter.class.getName()), List.nil(), paramsExpression.toList());
@@ -457,10 +480,10 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             atCreates.add(createAnnotationExpression(annotation));
         }
         JCExpression atsCreatedExpression =
-                treeMaker.NewArray(memberAccess(MetaAnnotation.class.getName()), List.nil(), atCreates.toList());
+            treeMaker.NewArray(memberAccess(MetaAnnotation.class.getName()), List.nil(), atCreates.toList());
         return treeMaker.Apply(List.nil(), createParamMethod,
-                List.of(treeMaker.Literal(metaParam.getName()), treeMaker.Ident(getNameFromString(metaParam.getName())),
-                        treeMaker.ClassLiteral(metaParam.getType()), atsCreatedExpression));
+            List.of(treeMaker.Literal(metaParam.getName()), treeMaker.Ident(getNameFromString(metaParam.getName())),
+                treeMaker.ClassLiteral(metaParam.getType()), atsCreatedExpression));
     }
 
     /**
@@ -475,7 +498,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             ListBuffer<JCExpression> expressions = new ListBuffer<>();
             type = type.replaceAll("<.*>", "").replace("[]", "");
             if (obj instanceof java.util.List) {
-                java.util.List list = (java.util.List) obj;
+                java.util.List list = (java.util.List)obj;
                 for (Object data : list) {
                     expressions.add(literalExpression(data, type));
                 }
@@ -484,8 +507,8 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             }
             type = type.replaceAll("<.*>", "").replaceAll("\\[\\]", "").replaceAll("\\(\\)", "");
             return treeMaker.NewArray(
-                    // Class<? extend AAAL>[] -> Class
-                    memberAccess(type), List.nil(), expressions.toList());
+                // Class<? extend AAAL>[] -> Class
+                memberAccess(type), List.nil(), expressions.toList());
         } else if ("java.lang.string".equals(lowerType)) {
             return treeMaker.Literal(value);
         } else if ("int".equals(lowerType)) {
@@ -507,25 +530,31 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             return treeMaker.Literal(Boolean.valueOf(value));
         } else if (lowerType.contains("java.lang.class")) {
             if (obj instanceof Type) {
-                return classLiteral((Type) obj);
+                return classLiteral((Type)obj);
             }
             if (obj instanceof Class) {
-                return classLiteral(((Class) obj).classType);
+                return classLiteral(((Class)obj).classType);
             }
             return treeMaker.Literal(value + ".class");
         } else if (obj instanceof Enum) {
-            return treeMaker.QualIdent(((Enum) obj).value);
+            return treeMaker.QualIdent(((Enum)obj).value);
         }
         return treeMaker.Literal(value);
     }
 
     /**
-     * @see MetaMethod#create(Integer, String, MetaClass, MetaParameter[], MetaAnnotation[], Map)
+     * @see MetaMethod#create(Integer, MetaType, MetaParameter[], MetaAnnotation[], Map)
      */
-    protected JCExpression newMetaExpression(Integer cacheIndex) {
-        return treeMaker.Apply(List.nil(), memberAccess(getCreateMethod(MetaMethod.class)),
-                List.of(treeMaker.Literal(cacheIndex), methodNameExpression(), metaOwnerExpression(), paramsExpression(),
-                        methodAnnotationsExpression(), metaExtensionExpression()));
+    protected JCExpression newMetaExpression(Integer metaIndex) {
+        return treeMaker.Apply(
+            List.nil(),
+            memberAccess(getCreateMethod(MetaMethod.class)),
+            List.of(treeMaker.Literal(metaIndex),
+                metaOwnerExpression(),
+                paramsExpression(),
+                methodAnnotationsExpression(),
+                metaExtensionExpression())
+        );
     }
 
     /**
@@ -546,13 +575,10 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
-     * @see org.fastlight.apt.model.MetaClass#create(Object, MetaAnnotation[])
+     * @see MetaType#create(Object, MetaAnnotation[])
      */
     protected JCExpression metaOwnerExpression() {
-        JCExpression ownerType = classLiteral(ctxCompile.getOwnerElement().type);
-        JCExpression annotations = createAnnotationArrayExpression(ctxCompile.getOwnerElement().getAnnotationMirrors());
-        return treeMaker
-                .Apply(List.nil(), memberAccess(getCreateMethod(MetaClass.class)), List.of(ownerType, annotations));
+        return memberAccess(META_OWNER_VAR);
     }
 
     /**
@@ -573,7 +599,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      * @see MetaMethod#getParameters()
      */
     protected JCExpression paramsExpression() {
-        return paramsExpression((List<VarSymbol>) ctxCompile.getMethodElement().getParameters());
+        return paramsExpression((List<VarSymbol>)ctxCompile.getMethodElement().getParameters());
     }
 
     /**
@@ -591,6 +617,106 @@ public abstract class BaseFastTranslator extends TreeTranslator {
      */
     protected JCExpression methodNameExpression() {
         return treeMaker.Literal(ctxCompile.getMethodDecl().name.toString());
+    }
+
+    /**
+     * 获取 defs 中类型为 JcVariableDecl 且名字为 name 的变量
+     */
+    protected JCVariableDecl getVar(List<JCTree> defs, String name) {
+        if (FastCollections.isEmpty(defs)) {
+            return null;
+        }
+        return defs.stream().filter(
+            v -> v instanceof JCVariableDecl && Objects.equals(name, ((JCVariableDecl)v).name.toString()))
+            .findFirst()
+            .map(v -> (JCVariableDecl)v)
+            .orElse(null);
+    }
+
+    /**
+     * 添加一个 metwOwner 静态变量，类型为 {@link MetaType}
+     */
+    public void addMetaOwnerVar(JCClassDecl jcClassDecl) {
+        if (getVar(jcClassDecl.defs, META_OWNER_VAR) != null) {
+            return;
+        }
+        //  new Object(){}
+        JCNewClass anonymousClass = treeMaker.NewClass(
+            null,
+            List.nil(),
+            memberAccess(Object.class.getName()),
+            List.nil(),
+            treeMaker.ClassDef(
+                treeMaker.Modifiers(0),
+                getNameFromString(StringUtils.EMPTY),
+                List.nil(),
+                null,
+                List.nil(),
+                List.nil()
+            ));
+
+        // new Object(){}.getClass().getEnclosingClass()
+        JCExpression getClass = treeMaker.Apply(
+            List.nil(),
+            treeMaker.Select(anonymousClass, getNameFromString("getClass")),
+            List.nil()
+        );
+        // new Object(){}.getClass().get
+        JCExpression ownerTypeExpression = treeMaker.Apply(
+            List.nil(),
+            treeMaker.Select(getClass, getNameFromString("getEnclosingClass")),
+            List.nil()
+        );
+        JCModifiers modifiers = treeMaker.Modifiers(getClassFinalModifiers());
+        JCExpression annotations = createAnnotationArrayExpression(ctxCompile.getOwnerElement().getAnnotationMirrors());
+        // 添加变量定义
+        JCVariableDecl ownerTypeVar = treeMaker.VarDef(
+            modifiers,
+            getNameFromString(META_OWNER_VAR),
+            memberAccess(MetaType.class.getName()),
+            treeMaker.Apply(
+                List.nil(),
+                memberAccess(getCreateMethod(MetaType.class)),
+                List.of(ownerTypeExpression, annotations)
+            )
+        );
+        addClassVar(jcClassDecl, ownerTypeVar);
+    }
+
+    /**
+     * 给一个类增加一个变量
+     */
+    protected void addClassVar(JCClassDecl jcClassDecl, JCVariableDecl jcVariableDecl) {
+        if (getVar(jcClassDecl.defs, jcClassDecl.name.toString()) != null) {
+            logError(String.format("duplicate var %s for lcass %s", jcVariableDecl.name.toString(),
+                jcClassDecl.name.toString())
+            );
+            return;
+        }
+        ListBuffer<JCTree> defs = new ListBuffer<>();
+        defs.addAll(jcClassDecl.defs);
+        defs.add(jcVariableDecl);
+        jcClassDecl.defs = defs.toList();
+    }
+
+    /**
+     * 根据当前类元素的状态生成不同的访问权限
+     * 1. 普通类生成是 private static final
+     * 2. 动态内部类生成的是  private final
+     * 3. 接口生成的是 static final
+     */
+    protected long getClassFinalModifiers() {
+        long modifiers = Flags.PRIVATE;
+        if (ctxCompile.getOwnerElement().isInterface()) {
+            modifiers = 0;
+        }
+        boolean isInnerClass = !(ctxCompile.getOwnerElement().getEnclosingElement() instanceof PackageElement);
+        boolean isStaticClass = ctxCompile.getOwnerElement().getModifiers().contains(Modifier.STATIC);
+        if (!isInnerClass || isStaticClass) {
+            modifiers = modifiers | Flags.STATIC;
+        }
+        modifiers = modifiers | Flags.FINAL;
+        return modifiers;
     }
 
     /**
