@@ -29,6 +29,8 @@ public class CtxAsserts {
         // 静态类没有 this
         if (ctx.getMetaMethod().isStatic()) {
             Assert.assertNull(ctx.getThis());
+        } else {
+            Assert.assertNotNull(ctx.getThis());
         }
         // 对于生成的匿名类，其 ownerType 为子类
         Assert.assertTrue(ctx.getMetaMethod().getMetaOwner().getType().isAssignableFrom(ownerType));

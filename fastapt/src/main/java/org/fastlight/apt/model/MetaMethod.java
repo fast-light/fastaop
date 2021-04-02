@@ -1,5 +1,6 @@
 package org.fastlight.apt.model;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -59,6 +60,13 @@ public class MetaMethod {
      * 返回获取当前方法对象，懒汉模式
      */
     private transient Method method;
+
+    /**
+     * 是否方法上面包含某个注解
+     */
+    public boolean containAnnotation(Class<? extends Annotation> cls) {
+        return Arrays.stream(annotations).anyMatch(v -> cls.equals(v.getType()));
+    }
 
     /**
      * 构造一个方法元数据
