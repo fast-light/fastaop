@@ -6,6 +6,7 @@ import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 
 import javax.lang.model.element.ExecutableElement;
+
 import java.util.Map;
 
 /**
@@ -19,7 +20,6 @@ public class MethodCompile {
      * 父元素
      */
     private Symbol.ClassSymbol ownerElement;
-
 
     /**
      * 方法语法树
@@ -40,7 +40,6 @@ public class MethodCompile {
         return methodDecl.getReturnType().type;
     }
 
-
     public Symbol.ClassSymbol getOwnerElement() {
         return ownerElement;
     }
@@ -57,7 +56,6 @@ public class MethodCompile {
         this.methodDecl = methodDecl;
     }
 
-
     public ExecutableElement getMethodElement() {
         return methodElement;
     }
@@ -72,6 +70,13 @@ public class MethodCompile {
 
     @SuppressWarnings("unchecked")
     public <T> T getExtension(String key) {
-        return (T) extensions.get(key);
+        return (T)extensions.get(key);
+    }
+
+    public boolean canReturn() {
+        if (methodDecl.getReturnType() == null || methodDecl.getReturnType().type == null) {
+            return false;
+        }
+        return !"void".equals(methodDecl.getReturnType().type.toString());
     }
 }

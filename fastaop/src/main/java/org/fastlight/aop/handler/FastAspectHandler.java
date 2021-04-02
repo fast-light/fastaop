@@ -11,74 +11,31 @@ import org.fastlight.aop.model.FastAspectContext;
 public interface FastAspectHandler {
 
     /**
-     * 是否支持切面调用
-     *
-     * @param ctx 方法上下文
-     * @return 是否支持切入，后面的 preHandle，postHandle，returnHandle 的执行都依赖于它的结果
-     */
-    boolean support(FastAspectContext ctx);
-
-    /**
-     * 方法执行前调用
-     *
-     * @param ctx 方法上下文
-     */
-    void preHandle(FastAspectContext ctx);
-
-
-    /**
-     * 可以改变方法的返回值，最好不要覆写该方法，请覆写 returnHandle 即可
-     *
-     * @param isSupport support() 方法的返回值，主要是为了兼容当 return 是个匿名类的时候用 ? ... : ... 生成的代码会出错
-     * @param ctx       方法上下文
-     * @param returnVal 方法的返回值
-     * @param <T>       方法返回的类型
-     * @return 经过切面逻辑之后方法的返回数据
-     */
-    @SuppressWarnings("unchecked")
-    default <T> T returnWrapper(boolean isSupport, FastAspectContext ctx, T returnVal) {
-        if (!isSupport) {
-            return returnVal;
-        }
-        ctx.setReturnVal(returnVal);
-        returnHandle(ctx);
-        return (T) ctx.getReturnVal();
-    }
-
-    /**
-     * 可以覆盖方法的返回值，对于 void 方法不会调用
-     *
-     * @param ctx 方法上下文
-     * @see FastAspectContext#getReturnVal()
-     */
-    default void returnHandle(FastAspectContext ctx) {
-
-    }
-
-    /**
-     * 当方法抛异常的时候会回调该方法
-     *
-     * @param ctx 方法上下文
-     * @param e   方法抛出的异常
-     */
-    default void errorHandle(FastAspectContext ctx, Throwable e) {
-    }
-
-    /**
-     * 方法执行完毕之后的回调，无论方法是否有异常都会回调该方法
-     *
-     * @param ctx 方法上下文
-     */
-    default void postHandle(FastAspectContext ctx) {
-    }
-
-    /**
      * 执行顺序，数字越小越先执行
      *
      * @return 执行顺序
      */
     default int getOrder() {
         return 0;
+    }
+
+    /**
+     * 环绕处理
+     *
+     * @param ctx 切面上下文
+     * @return 方法返回值
+     * @throws Exception 切面执行异常或者方法调用异常
+     */
+    Object processAround(FastAspectContext ctx) throws Exception;
+
+    /**
+     * 默认是 SPI 代理执行，判断是否还有下个执行器，默认情况下不要覆盖它
+     *
+     * @param ctx 切面上下文
+     * @return true 还能执行
+     */
+    default boolean hasNextHandler(FastAspectContext ctx) {
+        return false;
     }
 
 }

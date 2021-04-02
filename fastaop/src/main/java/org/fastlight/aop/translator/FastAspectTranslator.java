@@ -5,12 +5,10 @@ import java.util.Optional;
 import javax.annotation.processing.Messager;
 
 import com.sun.tools.javac.code.Type;
-import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
+import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
-import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
-import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCNewArray;
 import com.sun.tools.javac.tree.JCTree.JCReturn;
@@ -21,7 +19,6 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name.Table;
 import org.fastlight.aop.annotation.FastAspectVar;
-import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.translator.BaseFastTranslator;
@@ -33,12 +30,6 @@ import org.fastlight.apt.translator.BaseFastTranslator;
 @SuppressWarnings("unchecked")
 public class FastAspectTranslator extends BaseFastTranslator {
     public static final String CONTEXT_VAR = "__fast_context";
-
-    public static final String HANDLER_VAR = "__fast_handler";
-
-    public static final String EXCEPTION_VAR = "__fast_exception";
-
-    public static final String SUPPORT_VAR = "__fast_support";
 
     public static final String META_METHOD_VAR = "__fast_meta_method";
 
@@ -80,36 +71,67 @@ public class FastAspectTranslator extends BaseFastTranslator {
         if (!Optional.ofNullable(jcMethodDecl.name).isPresent()) {
             return;
         }
-        // 防止重复切入
-        if (jcMethodDecl.toString().contains(HANDLER_VAR + ".preHandle")) {
-            return;
-        }
         if (isMarkedMethod()) {
             return;
         }
-        Integer methodIndex = addMetaCache();
+        Integer methodIndex = addMetaMethod();
         markMetaMethodAnnotation(methodIndex);
         JCVariableDecl ctxVar = newContextVar(methodIndex);
-        JCVariableDecl handleVar = handleVar(ctxVar);
         ListBuffer<JCStatement> ctxStatements = new ListBuffer<>();
         ctxStatements.add(ctxVar);
-        ctxStatements.add(handleVar);
-        ctxStatements.add(supportVar(handleVar));
-        ctxStatements.add(preHandleStatement(handleVar));
+        ctxStatements.add(invokeAopStatement());
         changeMethodDefine(jcMethodDecl, statements -> {
-                JCStatement bodyStatement = injectTryCatchFinally(
-                    statements,
-                    null,
-                    errorHandleStatement(handleVar),
-                    postHandleStatement(handleVar),
-                    Throwable.class.getName(),
-                    EXCEPTION_VAR,
-                    true,
-                    jcMethodDecl.pos
-                );
-                ctxStatements.add(bodyStatement);
+                ctxStatements.addAll(statements);
                 return ctxStatements.toList();
             }
+        );
+    }
+
+    /**
+     * 生成切面方法调用代码
+     * @formatter:off
+     * <example>
+     *     public void func(Object... args){
+     *         FastAspectContext __fast_context = ...
+     *         if(__fast_context.hasNextHandler()){
+     *             return __fast_context.invoke()
+     *         }
+     *     }
+     * </example>
+     * @formatter:on
+     * @see FastAspectContext#hasNextHandler()
+     */
+    protected JCStatement invokeAopStatement() {
+        JCExpression hasNextHandler = treeMaker.Apply(
+            List.nil(),
+            memberAccess(CONTEXT_VAR + ".hasNextHandler"),
+            List.nil()
+        );
+
+        JCExpression invoke = treeMaker.Apply(
+            List.nil(),
+            memberAccess(CONTEXT_VAR + ".invoke"),
+            List.nil()
+        );
+        JCBlock invokeBlock;
+        if (ctxCompile.canReturn()) {
+            JCReturn jcReturn = treeMaker.Return(
+                treeMaker.TypeCast(
+                    ctxCompile.getReturnType(),
+                    invoke
+                )
+            );
+            invokeBlock = treeMaker.Block(0, List.of(jcReturn));
+        } else {
+            invokeBlock = treeMaker.Block(0, List.of(
+                treeMaker.Exec(invoke),
+                treeMaker.Return(null)
+            ));
+        }
+        return treeMaker.If(
+            hasNextHandler,
+            invokeBlock,
+            null
         );
     }
 
@@ -166,220 +188,9 @@ public class FastAspectTranslator extends BaseFastTranslator {
     }
 
     /**
-     * 处理包装 return，回调 handler 接口
-     *
-     * @see org.fastlight.aop.handler.FastAspectHandler#returnWrapper(boolean, FastAspectContext, Object)
-     */
-    @Override
-    public void visitReturn(JCReturn jcReturn) {
-        super.visitReturn(jcReturn);
-        if (isInnerClass) {
-            return;
-        }
-        Type returnType = ctxCompile.getReturnType();
-        if (jcReturn.expr == null || returnType == null || "void".equals(returnType.toString())) {
-            return;
-        }
-        // 防止重复处理
-        if (jcReturn.expr.toString().contains(CONTEXT_VAR)) {
-            return;
-        }
-        // 对于 lambda 表达式，必须要强转，不然编译报错
-        JCExpression castExpr = treeMaker.TypeCast(
-            returnType,
-            jcReturn.expr
-        );
-        jcReturn.expr = treeMaker.Apply(
-            List.nil(),
-            treeMaker.Select(treeMaker.Ident(getNameFromString(HANDLER_VAR)),
-                getNameFromString("returnWrapper")),
-            List.of(
-                treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-                treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                castExpr
-            )
-        );
-    }
-
-    /**
-     * @formatter:off
-     * <example>
-     * ..
-     * catch(Throwable e){
-     *     if(__fast_support){
-     *         __fast_handler.errorHandle(__fast_context,e);
-     *     }
-     *     if(__fast_context.isErrorFastReturn()){
-     *         return __fast_context.getReturnVal();
-     *     }
-     *     throw e;
-     * }
-     * </example>
-     * @formatter:on
-     * @see org.fastlight.aop.handler.FastAspectHandler#errorHandle(FastAspectContext, Throwable)
-     * @see FastAspectContext#isFastReturn()
-     */
-    protected JCStatement errorHandleStatement(JCVariableDecl handleVar) {
-        // void 直接 return
-        JCReturn jcReturn = getReturn();
-        JCExpression isFastReturn = treeMaker.Apply(
-            List.nil(),
-            treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                getNameFromString("isFastReturn")),
-            List.nil()
-        );
-        JCIdent ifSupport = treeMaker.Ident(getNameFromString(SUPPORT_VAR));
-        JCStatement errorHandleExec = treeMaker.Exec(
-            treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("errorHandle")),
-                List.of(
-                    treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                    treeMaker.Ident(getNameFromString(EXCEPTION_VAR))
-                )
-            )
-        );
-        return treeMaker.If(
-            ifSupport,
-            treeMaker.Block(0, List.of(
-                errorHandleExec,
-                treeMaker.If(
-                    isFastReturn,
-                    jcReturn,
-                    null)
-                )
-            ),
-            null
-        );
-    }
-
-    /**
-     * 获取返回值 ctx.getReturnVal()
-     */
-    protected JCReturn getReturn() {
-        JCReturn jcReturn = treeMaker.Return(null);
-        if ("void".equals(ctxCompile.getReturnType().toString())) {
-            return jcReturn;
-        }
-        jcReturn = treeMaker.Return(
-            treeMaker.TypeCast(ctxCompile.getReturnType(),
-                treeMaker.Apply(
-                    List.nil(),
-                    treeMaker.Select(
-                        treeMaker.Ident(getNameFromString(CONTEXT_VAR)), getNameFromString("getReturnVal")
-                    ),
-                    List.nil()
-                )
-            )
-        );
-        return jcReturn;
-    }
-
-    /**
-     * @formatter:off
-     * <example>
-     * if(__fast_support){
-     *     __fast_handler.preHandle(__fast_context);
-     *     if(__fast_context.preFastReturn()){
-     *         return __fast_context.getReturnVal(); // 对于 void 直接 return;
-     *     }
-     * }
-     * </example>
-     * @formatter:on
-     * @see org.fastlight.aop.handler.FastAspectHandler#preHandle(FastAspectContext)
-     * @see FastAspectContext#isFastReturn()
-     * @see FastAspectContext#getReturnVal()
-     */
-    protected JCStatement preHandleStatement(JCVariableDecl handleVar) {
-        JCExpressionStatement preHandleExec = treeMaker.Exec(
-            treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("preHandle")),
-                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-            )
-        );
-        JCIdent ifSupport = treeMaker.Ident(getNameFromString(SUPPORT_VAR));
-        if (ctxCompile.getReturnType() == null) {
-            return treeMaker.If(
-                ifSupport,
-                preHandleExec,
-                null
-            );
-        }
-        // void 直接 return
-        JCReturn jcReturn = getReturn();
-        JCExpression isFastReturn = treeMaker.Apply(
-            List.nil(),
-            treeMaker.Select(treeMaker.Ident(getNameFromString(CONTEXT_VAR)),
-                getNameFromString("isFastReturn")),
-            List.nil()
-        );
-        return treeMaker.If(
-            ifSupport,
-            treeMaker.Block(0, List.of(
-                preHandleExec,
-                treeMaker.If(
-                    isFastReturn,
-                    jcReturn,
-                    null
-                )
-            )),
-            null
-        );
-    }
-
-    /**
-     * boolean __fast_support = __fast_handler.support(__fast_context)
-     */
-    protected JCVariableDecl supportVar(JCVariableDecl handleVar) {
-        return treeMaker.VarDef(
-            treeMaker.Modifiers(0),
-            getNameFromString(SUPPORT_VAR),
-            treeMaker.TypeIdent(TypeTag.BOOLEAN),
-            treeMaker.Apply(
-                List.nil(),
-                treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("support")),
-                List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-            )
-        );
-    }
-
-    /**
-     * @see org.fastlight.aop.handler.FastAspectHandler#postHandle(FastAspectContext)
-     */
-    protected JCStatement postHandleStatement(JCVariableDecl handleVar) {
-        return treeMaker.If(
-            treeMaker.Ident(getNameFromString(SUPPORT_VAR)),
-            treeMaker.Exec(
-                treeMaker.Apply(
-                    List.nil(),
-                    treeMaker.Select(treeMaker.Ident(handleVar.getName()), getNameFromString("postHandle")),
-                    List.of(treeMaker.Ident(getNameFromString(CONTEXT_VAR)))
-                )
-            ), null
-        );
-    }
-
-    /**
-     * @see FastAspectContext#buildHandler()
-     */
-    protected JCVariableDecl handleVar(JCVariableDecl ctxVar) {
-        JCExpression expression = treeMaker.Apply(
-            List.nil(),
-            treeMaker.Select(treeMaker.Ident(ctxVar.getName()), getNameFromString("buildHandler")),
-            List.nil()
-        );
-        return treeMaker.VarDef(treeMaker.Modifiers(0),
-            getNameFromString(HANDLER_VAR),
-            memberAccess(FastAspectHandler.class.getName()),
-            expression
-        );
-    }
-
-    /**
      * 将当前 method 的元元数据进行缓存
      */
-    protected Integer addMetaCache() {
+    protected Integer addMetaMethod() {
         JCNewArray originInit = (JCNewArray)metaMethodVar.init;
         List<JCExpression> elements = originInit.elems;
         ListBuffer<JCExpression> newElements = new ListBuffer<>();

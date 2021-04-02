@@ -1,11 +1,11 @@
 package org.fastlight.aop.model;
 
+import java.util.Map;
+
 import com.google.common.collect.Maps;
 import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.handler.FastAspectHandlerBuilder;
 import org.fastlight.apt.model.MetaMethod;
-
-import java.util.Map;
 
 /**
  * @author ychost@outlook.com
@@ -14,14 +14,24 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 public class FastAspectContext {
     /**
-     * 缓存扩展 key
+     * handler 构造器
      */
     public static final String EXT_META_BUILDER_CLASS = "fast.meta_handler_builder_class";
+
+    /**
+     * handler 实例
+     */
     public static final String EXT_META_HANDLER = "fast.meta_handler";
+
     /**
      * 构造 handler 的时候需要线程安全
      */
     public static final Object HANDLER_LOCKER = new Object();
+
+    /**
+     * 当前线程 id
+     */
+    private final long threadId = Thread.currentThread().getId();
 
     /**
      * 方法元数据
@@ -49,26 +59,6 @@ public class FastAspectContext {
     private Map<String, Object> extensions;
 
     /**
-     * 控制当前方法是否立刻 return 或者继续执行方法逻辑
-     */
-    private FastCtrlFlow ctrlFlow = FastCtrlFlow.EXEC_FLOW;
-
-    /**
-     * 是否立即返回
-     */
-    public boolean isFastReturn() {
-        return FastCtrlFlow.FAST_RETURN.equals(ctrlFlow);
-    }
-
-    /**
-     * 立刻返回，如果是 void 则是 return
-     */
-    public void fastReturn(Object returnVal) {
-        setReturnVal(returnVal);
-        ctrlFlow = FastCtrlFlow.FAST_RETURN;
-    }
-
-    /**
      * 构造一个上下文
      */
     public static FastAspectContext create(MetaMethod metaMethod, Object owner, Object[] args) {
@@ -93,7 +83,7 @@ public class FastAspectContext {
     /**
      * 构造一个 Handler，线程安全的，通过缓存来优化性能
      */
-    public FastAspectHandler buildHandler() {
+    public FastAspectHandler getHandler() {
         try {
             FastAspectHandler handler = getMetaExtension(EXT_META_HANDLER);
             if (handler != null) {
@@ -125,10 +115,8 @@ public class FastAspectContext {
     /**
      * 添加扩展属性，方法内有效
      *
-     * @param key
-     *            扩展 key
-     * @param val
-     *            扩展 value
+     * @param key 扩展 key
+     * @param val 扩展 value
      */
     public void addExtension(String key, Object val) {
         if (extensions == null) {
@@ -140,10 +128,8 @@ public class FastAspectContext {
     /**
      * 获取扩展属性
      *
-     * @param key
-     *            扩展 key
-     * @param <T>
-     *            扩展 value 类型
+     * @param key 扩展 key
+     * @param <T> 扩展 value 类型
      * @return 扩展 value
      */
     public <T> T getExtension(String key) {
@@ -156,10 +142,8 @@ public class FastAspectContext {
     /**
      * 添加全局的元数据扩展，每个 Method 有唯一的一个缓存池
      *
-     * @param key
-     *            扩展 key
-     * @param value
-     *            扩展 value
+     * @param key   扩展 key
+     * @param value 扩展 value
      */
     public void addMetaExtension(String key, Object value) {
         getMetaMethod().addMetaExtension(key, value);
@@ -168,10 +152,8 @@ public class FastAspectContext {
     /**
      * 获取全局的元数据扩展，每个 Method 有唯一的缓存池
      *
-     * @param key
-     *            扩展 key
-     * @param <T>
-     *            扩展 value 的类型
+     * @param key 扩展 key
+     * @param <T> 扩展 value 的类型
      * @return 扩展 value
      */
     public <T> T getMetaExtension(String key) {
@@ -206,5 +188,43 @@ public class FastAspectContext {
 
     public Object[] getArgs() {
         return args;
+    }
+
+    /**
+     * 生成的代码调用入口，仅支持单线程调用！不能切换线程
+     */
+    public Object invoke(Object... args) {
+        try {
+            return proceed(args);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 切面 handler 调用入口，仅支持单线程调用
+     */
+    public Object proceed(Object... args) throws Exception {
+        if (Thread.currentThread().getId() != threadId) {
+            throw new RuntimeException("[FastAop] not support proceed in multi thread");
+        }
+        Integer originIndex = getMetaMethod().getHandlerIndex();
+        try {
+            if (args.length > 0) {
+                this.args = args;
+            }
+            // 调用下一个 handler 去处理
+            this.getMetaMethod().handleNext();
+            return getHandler().processAround(this);
+        } finally {
+            getMetaMethod().handleReset(originIndex);
+        }
+    }
+
+    /**
+     * 是否有 handler 进行切面处理
+     */
+    public boolean hasNextHandler() {
+        return getHandler().hasNextHandler(this);
     }
 }

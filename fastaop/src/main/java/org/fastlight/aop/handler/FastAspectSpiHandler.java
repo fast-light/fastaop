@@ -1,12 +1,11 @@
 package org.fastlight.aop.handler;
 
-import com.google.common.collect.Lists;
-import org.fastlight.aop.model.FastAspectContext;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.ServiceLoader;
-import java.util.function.Consumer;
+
+import com.google.common.collect.Lists;
+import org.fastlight.aop.model.FastAspectContext;
 
 /**
  * 通过 SPI 注入执行器，然后代理调用他们
@@ -15,11 +14,6 @@ import java.util.function.Consumer;
  * @date 2021-03-27
  */
 public class FastAspectSpiHandler implements FastAspectHandler {
-    /**
-     * support 返回是 true 的 spi handler 缓存
-     */
-    public static final String EXT_SUPPORT_INDICES = "fast.support_indices";
-
     /**
      * SPI 注入进来的执行器
      */
@@ -85,62 +79,25 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      * {@inheritDoc}
      */
     @Override
-    public boolean support(FastAspectContext ctx) {
-        if (spiHandlers.isEmpty()) {
-            return false;
+    public Object processAround(FastAspectContext ctx) throws Exception {
+        Integer index = ctx.getMetaMethod().getHandlerIndex();
+        if (spiHandlers.size() == index) {
+            return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
         }
-        List<Integer> supportIndices = Lists.newArrayList();
-        for (int i = 0; i < spiHandlers.size(); i++) {
-            if (spiHandlers.get(i).support(ctx)) {
-                supportIndices.add(i);
-            }
+        if (spiHandlers.size() < index) {
+            throw new RuntimeException("[FastAop] not find handler for index " + index);
         }
-        ctx.addExtension(EXT_SUPPORT_INDICES, supportIndices);
-        return supportIndices.size() > 0;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void preHandle(FastAspectContext ctx) {
-        execProxy(ctx, handler -> handler.preHandle(ctx));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void returnHandle(FastAspectContext ctx) {
-        execProxy(ctx, handler -> handler.returnHandle(ctx));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void errorHandle(FastAspectContext ctx, Throwable e) {
-        execProxy(ctx, handler -> handler.errorHandle(ctx, e));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void postHandle(FastAspectContext ctx) {
-        execProxy(ctx, handler -> handler.postHandle(ctx));
-    }
-
-    /**
-     * 回调 spiHandler
-     *
-     * @param ctx    方法上下文
-     * @param action 回调的生命周期
-     */
-    protected void execProxy(FastAspectContext ctx, Consumer<FastAspectHandler> action) {
-        List<Integer> supportIndices = ctx.getExtension(EXT_SUPPORT_INDICES);
-        for (Integer index : supportIndices) {
-            action.accept(spiHandlers.get(index));
+        // 调用链式处理
+        Object result = spiHandlers.get(index).processAround(ctx);
+        // 没有调用 ctx.proceed() 直接返回结果
+        if ((index + 1) != ctx.getMetaMethod().getHandlerIndex()) {
+            return result;
         }
+        return processAround(ctx);
+    }
+
+    @Override
+    public boolean hasNextHandler(FastAspectContext ctx) {
+        return spiHandlers.size() > ctx.getMetaMethod().getHandlerIndex() + 1;
     }
 }

@@ -10,32 +10,12 @@ import org.fastlight.aop.model.FastAspectContext;
  */
 @FastAspectMark
 public class LogHandler implements FastAspectHandler {
-    public static final String START_MS = "log.start";
 
     @Override
-    public boolean support(FastAspectContext ctx) {
-        return true;
-    }
-
-    @Override
-    public void preHandle(FastAspectContext ctx) {
-        ctx.addExtension(START_MS, System.currentTimeMillis());
-        System.out.printf("[Start Invoking] %s.%s\n",
-            ctx.getMetaMethod().getMetaOwner().getType().getName(),
+    public Object processAround(FastAspectContext ctx) throws Exception {
+        System.out.printf("[processAround] %s.%s \n", ctx.getMetaMethod().getMetaOwner().getType().getName(),
             ctx.getMetaMethod().getName()
         );
-    }
-
-    @Override
-    public void postHandle(FastAspectContext ctx) {
-        System.out.printf("[Invoke Completed] %s.%s\n",
-            ctx.getMetaMethod().getMetaOwner().getType().getName(),
-            ctx.getMetaMethod().getName()
-        );
-    }
-
-    @Override
-    public int getOrder() {
-        return 1;
+        return ctx.proceed();
     }
 }

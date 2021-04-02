@@ -1,12 +1,12 @@
 package org.fastlight.apt.model;
 
-import com.google.common.collect.Maps;
-import org.fastlight.apt.annotation.FastMarkedMethod;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
+import org.fastlight.apt.annotation.FastMarkedMethod;
 
 /**
  * 方法元数据
@@ -15,6 +15,11 @@ import java.util.Map;
  * @date 2021-03-27
  */
 public class MetaMethod {
+    /**
+     * 用来控制 handler 的执行深度
+     */
+    private final ThreadLocal<Integer> handlerIndex = ThreadLocal.withInitial(() -> -1);
+
     /**
      * 该元素在静态 __fast_meta_method 的缓存索引
      */
@@ -68,8 +73,8 @@ public class MetaMethod {
         if (metaExtension != null && metaExtension.size() > 0) {
             metaMethod.metaExtensions.putAll(metaExtension);
         }
-        // 赋值 returnType，parameter.type，isStatic
-        metaMethod.patchedByReflectMethod();
+        // 赋值 returnType，parameter.type，isStatic，name
+        metaMethod.initMethod();
         return metaMethod;
     }
 
@@ -77,10 +82,6 @@ public class MetaMethod {
      * 全局元数据缓存
      */
     private final Map<String, Object> metaExtensions = Maps.newHashMap();
-
-    public int getCacheIndex() {
-        return cacheIndex;
-    }
 
     public boolean isStatic() {
         return isStatic;
@@ -123,16 +124,20 @@ public class MetaMethod {
             .limit(1)
             .findFirst()
             .orElseThrow(() -> new RuntimeException(
-                String.format("[FastAop] %s.%s mark index %s match failed", metaOwner.getType().getName(), name,
-                    cacheIndex)
+                String.format("[FastAop] %s.%s mark index %s match failed",
+                    metaOwner.getType().getName(),
+                    name,
+                    cacheIndex
+                )
             ));
+        method.setAccessible(true);
         return method;
     }
 
     /**
      * 通过反射获取方法将 paramType 和 returnType 进行打补丁 因为这些TYPE 是 T[][][] 这种多维泛型数组的时候，在语法树处理上面不太好搞，这里直接捕获运行时状态，让其更加的准确
      */
-    protected void patchedByReflectMethod() {
+    protected void initMethod() {
         Method method = getMethod();
         for (int i = 0; i < method.getParameters().length; i++) {
             parameters[i].setType(method.getParameters()[i].getType());
@@ -149,5 +154,30 @@ public class MetaMethod {
     public <T> T getMetaExtension(String key) {
         // noinspection unchecked
         return (T)metaExtensions.get(key);
+    }
+
+    /**
+     * 获取当前执行游标
+     *
+     * @return 执行器游标
+     */
+    public Integer getHandlerIndex() {
+        return handlerIndex.get();
+    }
+
+    /**
+     * 处理下一个
+     */
+    public void handleNext() {
+        handlerIndex.set(getHandlerIndex() + 1);
+    }
+
+    /**
+     * handler 游标置位
+     *
+     * @param index 游标初始位置
+     */
+    public void handleReset(Integer index) {
+        handlerIndex.set(index);
     }
 }

@@ -1,11 +1,12 @@
 package org.fastlight.apt.processor;
 
+import java.util.List;
+import java.util.Set;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
-import java.util.List;
-import java.util.Set;
 
 /**
  * 注解处理的总入口，java 编译器有个优化，同一个元素只会经过一个 processor，所以这里遍历所有元素并给所有处理器执行
@@ -19,17 +20,13 @@ public abstract class BaseAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> ats, RoundEnvironment env) {
-        try {
-            if (!env.processingOver()) {
-                processAnnotations(ats, env);
-            } else {
-                processOver();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
+        if (!env.processingOver()) {
+            processAnnotations(ats, env);
+        } else {
+            processOver();
         }
-        return true;
+        // 注意由于是处理了 * 所有需要返回 false，否则其它 APT 无法执行
+        return false;
     }
 
     /**
