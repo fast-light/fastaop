@@ -42,12 +42,6 @@ public class FastAspectContext {
      * 当前调用的 this，静态方法就是 null
      */
     private Object owner;
-
-    /**
-     * 方法的返回值
-     */
-    private Object returnVal;
-
     /**
      * 方法的入参
      */
@@ -158,14 +152,6 @@ public class FastAspectContext {
      */
     public <T> T getMetaExtension(String key) {
         return getMetaMethod().getMetaExtension(key);
-    }
-
-    public Object getReturnVal() {
-        return returnVal;
-    }
-
-    public void setReturnVal(Object returnVal) {
-        this.returnVal = returnVal;
     }
 
     public MetaMethod getMetaMethod() {
