@@ -42,6 +42,8 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
 > -Djps.track.ap.dependencies=false
 2. 暂时手工编译，Maven 中央仓库还未发布
 
+> 如果 在 IDEA 里面运行 example 报错，请在项目根目录先执行 mvn clean 再去 IDEA 里面运行
+
 ```xml
 
 <dependency>
