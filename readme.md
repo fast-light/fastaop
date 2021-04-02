@@ -153,3 +153,19 @@ FastAspectContext#getMetaMethod()
 这里通过切面逻辑实现了修复一个 add 方法的运算，且仅仅针对于标注了 @CalcRepair 的方法做修复
 
 ![practice](http://pan.sudoyc.com:7878/s/Y69Xg7QtNXYGrPk/download)
+
+## 原理
+
+通过在编译的时候拦截「注解处理」过程，对标记的方法和类注入切入代码，其核心代码为：
+
+```java
+if (__fast_context.hasNextHandler()) {
+    return (Integer)__fast_context.invoke(new Object[0]);
+}
+```
+
+@FastAspectAround 是标记切面逻辑为一个 SPI 服务，通过 __fast_context.invoke 去递归调用切面服务，从而实现了 around 拦截
+
+> 方法原始逻辑也被算作一个切面服务，且被最后执行，如果有切面没有调用 ctx.proceed() 那么原始方法不会被执行，整个递归逻辑会立刻返回
+
+![decompile](http://pan.sudoyc.com:7878/s/Zbr4nb55pfoLgjP/download)
