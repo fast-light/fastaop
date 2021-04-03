@@ -210,7 +210,7 @@ public class FastAspectContext {
     /**
      * 是否有 handler 进行切面处理
      */
-    public boolean hasNextHandler() {
-        return getHandler().hasNextHandler(this);
+    public boolean support() {
+        return getHandler().support(this.metaMethod);
     }
 }

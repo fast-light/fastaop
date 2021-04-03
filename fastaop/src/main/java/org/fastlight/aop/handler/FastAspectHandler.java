@@ -1,6 +1,7 @@
 package org.fastlight.aop.handler;
 
 import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.apt.model.MetaMethod;
 
 /**
  * 切面的生命周期回调，主要有 preHandle，returnHandle，errorHandle，postHandle
@@ -29,13 +30,13 @@ public interface FastAspectHandler {
     Object processAround(FastAspectContext ctx) throws Exception;
 
     /**
-     * 默认是 SPI 代理执行，判断是否还有下个执行器，默认情况下不要覆盖它
+     * 切面是否支持该方法，结果会缓存，一般是通过方法的注解来过滤，缓存之后可提高切面执行效率
      *
-     * @param ctx 切面上下文
-     * @return true 还能执行
+     * @param metaMethod 方法元数据
+     * @return true 切面会被执行
      */
-    default boolean hasNextHandler(FastAspectContext ctx) {
-        return false;
+    default boolean support(MetaMethod metaMethod) {
+        return true;
     }
 
 }

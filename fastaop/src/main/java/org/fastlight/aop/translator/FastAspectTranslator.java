@@ -93,18 +93,18 @@ public class FastAspectTranslator extends BaseFastTranslator {
      * <example>
      *     public void func(Object... args){
      *         FastAspectContext __fast_context = ...
-     *         if(__fast_context.hasNextHandler()){
+     *         if(__fast_context.support()){
      *             return __fast_context.invoke()
      *         }
      *     }
      * </example>
      * @formatter:on
-     * @see FastAspectContext#hasNextHandler()
+     * @see FastAspectContext#support()
      */
     protected JCStatement invokeAopStatement() {
         JCExpression hasNextHandler = treeMaker.Apply(
             List.nil(),
-            memberAccess(CONTEXT_VAR + ".hasNextHandler"),
+            memberAccess(CONTEXT_VAR + ".support"),
             List.nil()
         );
 

@@ -69,6 +69,14 @@ public class MetaMethod {
     }
 
     /**
+     * 获取注解元数据，如果不存在就返回 null
+     */
+    public MetaAnnotation getAnnotation(Class<? extends Annotation> cls) {
+        return Arrays.stream(annotations).filter(v -> cls.equals(v.getType()))
+            .findFirst().orElse(null);
+    }
+
+    /**
      * 构造一个方法元数据
      */
     public static MetaMethod create(Integer cacheIndex, MetaType metaOwner, MetaParameter[] parameters,
@@ -165,7 +173,7 @@ public class MetaMethod {
     }
 
     /**
-     * 获取当前执行游标
+     * 获取当前执行游标，禁止私自调用
      *
      * @return 执行器游标
      */
@@ -174,14 +182,14 @@ public class MetaMethod {
     }
 
     /**
-     * 处理下一个
+     * 处理下一个，禁止私自调用
      */
     public void handleNext() {
         handlerIndex.set(getHandlerIndex() + 1);
     }
 
     /**
-     * handler 游标置位
+     * handler 游标置位，禁止私自调用
      *
      * @param index 游标初始位置
      */

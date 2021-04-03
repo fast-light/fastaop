@@ -87,8 +87,17 @@ public class LogHandler implements FastAspectHandler {
     public int getOrder() {
         return 1;
     }
-}
 
+    /**
+     * 判断是否切入某个方法，该 support 决定了后面的 processAround 是否被调用，结果会被缓存（提高执行效率）
+     * 如果想动态调整对某个方法的支持，请返回 true，且在 processAround 进行判断
+     * 默认返回为 true
+     */
+    @Override
+    public boolean support(MetaMethod metaMethod) {
+        return true;
+    }
+}
 ```
 
 ### 三、使用切面
@@ -154,20 +163,128 @@ FastAspectContext#getMetaMethod()
 
 这里通过切面逻辑实现了修复一个 add 方法的运算，且仅仅针对于标注了 @CalcRepair 的方法做修复
 
-![practice](http://pan.sudoyc.com:7878/s/Y69Xg7QtNXYGrPk/download)
+```java
+/**
+ * 修复一个损坏的计算器
+ *
+ * @author ychost@outlook.com
+ * @date 2021-04-02
+ */
+@FastAspect
+public class FastCalculatorTest {
+
+    /**
+     * 单测入口
+     */
+    @Test
+    public void calcTest() {
+        int res = add(3, 2);
+        Assert.assertEquals(5, res);
+    }
+
+    /**
+     * 待修复的加法逻辑
+     */
+    @CalcRepair
+    int add(int a, int b) {
+        throw new RuntimeException("this is a broken calculator");
+    }
+
+    /**
+     * 修复注解
+     */
+    @Target(ElementType.METHOD)
+    public @interface CalcRepair {
+    }
+
+    /**
+     * 修复 calc 的切面
+     */
+    @FastAspectAround
+    public static class CalcRepairHandler implements FastAspectHandler {
+        @Override
+        public boolean support(MetaMethod metaMethod) {
+            return metaMethod.containAnnotation(CalcRepair.class);
+        }
+
+        @Override
+        public Object processAround(FastAspectContext ctx) throws Exception {
+            int a = (int)ctx.getArgs()[0];
+            int b = (int)ctx.getArgs()[1];
+            return a + b;
+        }
+    }
+}
+```
+
+
 
 ## 原理
 
 通过在编译的时候拦截「注解处理」过程，对标记的方法和类注入切入代码，其核心代码为：
 
 ```java
-if (__fast_context.hasNextHandler()) {
-    return (Integer)__fast_context.invoke(new Object[0]);
-}
+ if (__fast_context.support()) {
+        __fast_context.invoke(new Object[0]);
+ }
 ```
 
 @FastAspectAround 是标记切面逻辑为一个 SPI 服务，通过 __fast_context.invoke 去递归调用切面服务，从而实现了 around 拦截
 
 > 方法原始逻辑也被算作一个切面服务，且被最后执行，如果有切面没有调用 ctx.proceed() 那么原始方法不会被执行，整个递归逻辑会立刻返回
 
-![decompile](http://pan.sudoyc.com:7878/s/Zbr4nb55pfoLgjP/download)
+```java
+public class FastCalculatorTest {
+    private static final MetaType __fast_meta_owner = MetaType.create(...);
+    private static final MetaMethod[] __fast_meta_method;
+
+    public FastCalculatorTest() {
+    }
+
+    @Test
+    @FastMarkedMethod(0)
+    public void calcTest() {
+        FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[0], this, new Object[0]);
+        if (__fast_context.support()) {
+            __fast_context.invoke(new Object[0]);
+        } else {
+            int res = this.add(3, 2);
+            Assert.assertEquals(5L, (long)res);
+        }
+    }
+
+    @FastMarkedMethod(1)
+    @FastCalculatorTest.CalcRepair
+    int add(int a, int b) {
+        FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[1], this, new Object[]{a, b});
+        if (__fast_context.support()) {
+            return (Integer)__fast_context.invoke(new Object[0]);
+        } else {
+            throw new RuntimeException("this is a broken calculator");
+        }
+    }
+
+    static {
+        __fast_meta_method = new MetaMethod[]{...}
+    }
+    public static class CalcRepairHandler implements FastAspectHandler {
+        public CalcRepairHandler() {
+        }
+
+        public boolean support(MetaMethod metaMethod) {
+            return metaMethod.containAnnotation(FastCalculatorTest.CalcRepair.class);
+        }
+
+        public Object processAround(FastAspectContext ctx) throws Exception {
+            int a = (Integer)ctx.getArgs()[0];
+            int b = (Integer)ctx.getArgs()[1];
+            return a + b;
+        }
+    }
+
+    @Target({ElementType.METHOD})
+    public @interface CalcRepair {
+    }
+}
+```
+
