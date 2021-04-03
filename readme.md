@@ -234,6 +234,9 @@ public class FastCalculatorTest {
 > 方法原始逻辑也被算作一个切面服务，且被最后执行，如果有切面没有调用 ctx.proceed() 那么原始方法不会被执行，整个递归逻辑会立刻返回
 
 ```java
+/**
+ * 反编译后的代码
+ */
 public class FastCalculatorTest {
     private static final MetaType __fast_meta_owner = MetaType.create(...);
     private static final MetaMethod[] __fast_meta_method;
