@@ -95,15 +95,14 @@ public class FastAspectSpiHandler implements FastAspectHandler {
             if (getSupportIndices(ctx.getMetaMethod()).contains(i)) {
                 supportIndex = i;
                 break;
-            } else {
-                ctx.getMetaMethod().handleNext();
             }
         }
+        if (inputIndex != supportIndex) {
+            ctx.getMetaMethod().handleReset(supportIndex);
+        }
+        // 调用原始方法
         if (spiHandlers.size() == supportIndex) {
             return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
-        }
-        if (spiHandlers.size() < supportIndex) {
-            throw new RuntimeException("[FastAop] not find handler for index " + inputIndex);
         }
         // 调用链式处理
         Object result = spiHandlers.get(supportIndex).processAround(ctx);
