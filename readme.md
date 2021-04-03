@@ -55,7 +55,7 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
 
 ### 二、添加切面
 
-这里仅拦截了方法执行前和执行后，分别打印了入参和出参，同时输出了方法耗时，其关键元素如下：
+这里使用了一个简单的 LogHandler 去打印了方法信息，关注点如下：
 
 1. @FastAspectAround 标记切面逻辑
    
@@ -64,8 +64,10 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
    
    > 原方法为 ctx.proceed(...args)，如果不注入 args 那么以原始参数执行原方法
 1. getOrder() 来决定多个切面逻辑的执行顺序
-   
+
    > order 小的先执行
+
+1. support() 结果对于每个 MetaMethod 都会全局缓存用于提升切面执行效率
 
 ```java
 /**
