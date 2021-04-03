@@ -88,23 +88,28 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      */
     @Override
     public Object processAround(FastAspectContext ctx) throws Exception {
-        Integer index = ctx.getMetaMethod().getHandlerIndex();
-        if (spiHandlers.size() == index) {
+        Integer inputIndex = ctx.getMetaMethod().getHandlerIndex();
+        int supportIndex = spiHandlers.size();
+        // 直接跳到下一个支持的索引值
+        for (int i = inputIndex; i < spiHandlers.size(); i++) {
+            if (getSupportIndices(ctx.getMetaMethod()).contains(i)) {
+                supportIndex = i;
+                break;
+            } else {
+                ctx.getMetaMethod().handleNext();
+            }
+        }
+        if (spiHandlers.size() == supportIndex) {
             return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
         }
-        if (spiHandlers.size() < index) {
-            throw new RuntimeException("[FastAop] not find handler for index " + index);
+        if (spiHandlers.size() < supportIndex) {
+            throw new RuntimeException("[FastAop] not find handler for index " + inputIndex);
         }
         // 调用链式处理
-        if (getSupportIndices(ctx.getMetaMethod()).contains(index)) {
-            Object result = spiHandlers.get(index).processAround(ctx);
-            // 没有调用 ctx.proceed() 直接返回结果
-            if ((index + 1) != ctx.getMetaMethod().getHandlerIndex()) {
-                return result;
-            }
-            // 对于不支持的链路直接跳过提高执行效率
-        } else {
-            ctx.getMetaMethod().handleNext();
+        Object result = spiHandlers.get(supportIndex).processAround(ctx);
+        // 没有调用 ctx.proceed() 直接返回结果
+        if ((supportIndex + 1) != ctx.getMetaMethod().getHandlerIndex()) {
+            return result;
         }
         return processAround(ctx);
     }
