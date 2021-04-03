@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -102,17 +103,23 @@ public abstract class BaseFastSpiProcessor<T extends Annotation> extends BaseFas
      * 写入的文件路径，默认是 spi 的路径
      */
     protected String getFilePath(String type) {
-        return "META-INF/services/" + type;
+        return getFolderPath() + "/" + type;
+    }
+
+    protected String getFolderPath() {
+        return "META-INF/services";
     }
 
     protected synchronized void generateConfigFiles() throws IOException {
         for (String type : providers.keySet()) {
             Filer filer = environment.getFiler();
-            String filePath = filer.getResource(StandardLocation.CLASS_OUTPUT, "", getFilePath(type)).toUri().getPath();
-            File serviceFile = new File(filePath);
+            // 修复 windows filePath 以 /c:/Users/uuu.. 无法 create folder 的问题
+            URI folderUri = filer.getResource(StandardLocation.CLASS_OUTPUT, "", getFolderPath()).toUri();
+            URI fileUri = filer.getResource(StandardLocation.CLASS_OUTPUT, "", getFilePath(type)).toUri();
+            File serviceFile = new File(fileUri);
             if (!serviceFile.exists()) {
-                Files.createDirectories(Paths.get(filePath.substring(0, filePath.lastIndexOf("/"))));
-                Files.write(Paths.get(filePath), new byte[0], StandardOpenOption.CREATE);
+                Files.createDirectories(Paths.get(folderUri));
+                Files.write(Paths.get(fileUri), new byte[0], StandardOpenOption.CREATE);
             }
             Set<String> services = ServicesFiles.readServiceFile(new FileInputStream(serviceFile));
             Set<String> newServices = new HashSet<>(providers.get(type));
@@ -120,7 +127,7 @@ public abstract class BaseFastSpiProcessor<T extends Annotation> extends BaseFas
                 return;
             }
             services.addAll(newServices);
-            Path path = Paths.get(filePath);
+            Path path = Paths.get(fileUri);
             Files.write(path, Joiner.on("\n").join(services).getBytes(), StandardOpenOption.WRITE);
         }
 
