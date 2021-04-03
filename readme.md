@@ -235,7 +235,7 @@ public class FastCalculatorTest {
 
 ```java
 /**
- * 反编译后的代码
+ * 反编译后的代码，隐藏了元数据 create 细节
  */
 public class FastCalculatorTest {
     private static final MetaType __fast_meta_owner = MetaType.create(...);
@@ -244,16 +244,24 @@ public class FastCalculatorTest {
     public FastCalculatorTest() {
     }
 
+    //@FastMarkedMethod(0) 为编译添加，用于精准定位 Method
     @Test
     @FastMarkedMethod(0)
     public void calcTest() {
+        // 编译新增代码，所有标记的方法都会埋入这几行代码
+        // 1. 生产切面上下文
         FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[0], this, new Object[0]);
+        // 2. 检查是否有切面支持该方法
         if (__fast_context.support()) {
+            // 3. 调用切面逻辑，里面是递归调用，最终会根 MetaMethod 的 ThreadLocal 索引条件
+            // 再调用最多 1 次 calcTest() 且 __fast_context.support() 返回 false，执行原始代码
+            // 如果切面逻辑里面没有调用 ctx.proceed() 那么，原始代码不会被执行，逻辑会立即 return
             __fast_context.invoke(new Object[0]);
-        } else {
-            int res = this.add(3, 2);
-            Assert.assertEquals(5L, (long)res);
-        }
+            return;
+        } 
+        // 原始代码
+        int res = this.add(3, 2);
+        Assert.assertEquals(5L, (long)res);   
     }
 
     @FastMarkedMethod(1)
