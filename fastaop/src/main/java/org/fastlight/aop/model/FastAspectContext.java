@@ -29,9 +29,10 @@ public class FastAspectContext {
     public static final Object HANDLER_LOCKER = new Object();
 
     /**
-     * 当前线程 id
+     * 每个 context 进入切面 handler 的时候都会 copy 一份，然后赋值这个为 handlerIndex
+     * 可以解决多线程调用 ctx.proceed() 的问题
      */
-    private final long threadId = Thread.currentThread().getId();
+    private final int handlerIndex;
 
     /**
      * 方法元数据
@@ -40,6 +41,7 @@ public class FastAspectContext {
 
     /**
      * 当前调用的 this，静态方法就是 null
+     * 通过弱引用防止多线程持有 context 造成内存泄漏
      */
     private Object owner;
     /**
@@ -56,11 +58,16 @@ public class FastAspectContext {
      * 构造一个上下文
      */
     public static FastAspectContext create(MetaMethod metaMethod, Object owner, Object[] args) {
-        FastAspectContext ctx = new FastAspectContext();
+        // 这是系统初始化的，配置准许切面调用
+        FastAspectContext ctx = new FastAspectContext(-1);
         ctx.metaMethod = metaMethod;
         ctx.owner = owner;
         ctx.args = args;
         return ctx;
+    }
+
+    public FastAspectContext(int handlerIndex) {
+        this.handlerIndex = handlerIndex;
     }
 
     /**
@@ -191,20 +198,10 @@ public class FastAspectContext {
      * 切面 handler 调用入口，仅支持单线程调用
      */
     public Object proceed(Object... args) throws Exception {
-        if (Thread.currentThread().getId() != threadId) {
-            throw new RuntimeException("[FastAop] not support proceed in multi thread");
+        if (args.length > 0) {
+            this.args = args;
         }
-        Integer originIndex = getMetaMethod().getHandlerIndex();
-        try {
-            if (args.length > 0) {
-                this.args = args;
-            }
-            // 调用下一个 handler 去处理
-            this.getMetaMethod().handleNext();
-            return getHandler().processAround(this);
-        } finally {
-            getMetaMethod().handleReset(originIndex);
-        }
+        return getHandler().processAround(this);
     }
 
     /**
@@ -213,4 +210,23 @@ public class FastAspectContext {
     public boolean support() {
         return getHandler().support(this.metaMethod);
     }
+
+    /**
+     * 浅复制一个 context，解决多线程的问题
+     */
+    public FastAspectContext copy(int handlerIndex) {
+        FastAspectContext ctx = new FastAspectContext(handlerIndex);
+        ctx.args = args;
+        ctx.metaMethod = metaMethod;
+        ctx.owner = owner;
+        return ctx;
+    }
+
+    /**
+     * spi 处理的 handlers 的索引
+     */
+    public int getHandlerIndex() {
+        return handlerIndex;
+    }
+
 }

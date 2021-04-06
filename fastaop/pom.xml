@@ -12,6 +12,10 @@
 
     <artifactId>fastaop</artifactId>
 
+    <name>fastapt</name>
+    <description>java fast aop framework</description>
+    <url>https://github.com/fast-light/fastaop</url>
+
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>

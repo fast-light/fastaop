@@ -575,7 +575,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
-     * @see MetaType#create(Object, MetaAnnotation[])
+     * @see MetaType#create(java.lang.Class, MetaAnnotation[])
      */
     protected JCExpression metaOwnerExpression() {
         return memberAccess(META_OWNER_VAR);

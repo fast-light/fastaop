@@ -17,9 +17,9 @@ import org.fastlight.apt.annotation.FastMarkedMethod;
  */
 public class MetaMethod {
     /**
-     * 用来控制 handler 的执行深度
+     * 是否继续调用下一个切面，MetaMethod 是全局的，所以不存在内存泄漏
      */
-    private final ThreadLocal<Integer> handlerIndex = ThreadLocal.withInitial(() -> -1);
+    private final ThreadLocal<InvokeMethodType> invokeMethodType = ThreadLocal.withInitial(() -> InvokeMethodType.AOP);
 
     /**
      * 该元素在静态 __fast_meta_method 的缓存索引
@@ -173,27 +173,16 @@ public class MetaMethod {
     }
 
     /**
-     * 获取当前执行游标，禁止私自调用
-     *
-     * @return 执行器游标
+     * 配置是否继续调用下一个切面 Handler，否者直接返回
      */
-    public Integer getHandlerIndex() {
-        return handlerIndex.get();
+    public void setInvokeMethodType(InvokeMethodType invokeMethodTyp) {
+        invokeMethodType.set(invokeMethodTyp);
     }
 
     /**
-     * 处理下一个，禁止私自调用
+     * 是否继续调用下一个 Handler，如果当前 Handler 没有调用 ctx.proceed() 那么返回为 false
      */
-    public void handleNext() {
-        handlerIndex.set(getHandlerIndex() + 1);
-    }
-
-    /**
-     * handler 游标置位，禁止私自调用
-     *
-     * @param index 游标初始位置
-     */
-    public void handleReset(Integer index) {
-        handlerIndex.set(index);
+    public InvokeMethodType getInvokeMethodType() {
+        return invokeMethodType.get();
     }
 }

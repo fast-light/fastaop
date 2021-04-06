@@ -40,7 +40,6 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
 ### 一、引入依赖
 1. 如果 IDEA 报空指针，配置如下：setting->build->compiler->Shared build process VM options
 > -Djps.track.ap.dependencies=false
-2. 暂时手工编译，Maven 中央仓库还未发布
 
 > 如果 在 IDEA 里面运行 example 报错，请在项目根目录先执行 mvn clean 再去 IDEA 里面运行
 
@@ -144,7 +143,7 @@ FastAspectContext 内部属性分为动态属性和静态属性，其中动态�
 | :--------- | ------------------------------------------------------------ |
 | owner      | 方法所有者，对于 Bean 就是 this，对于静态方法为 null         |
 | args       | 入参值                                                       |
-| extensions | 上下文扩展，仅在本次执行有效，比如上文的 LogHandler 利用它实现了耗时打印 |
+| extensions | 上下文扩展，仅在本次执行有效 |
 
 ### 静态属性
 

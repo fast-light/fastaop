@@ -8,6 +8,7 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.apt.model.InvokeMethodType;
 import org.fastlight.apt.model.MetaMethod;
 
 /**
@@ -88,29 +89,29 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      */
     @Override
     public Object processAround(FastAspectContext ctx) throws Exception {
-        Integer inputIndex = ctx.getMetaMethod().getHandlerIndex();
-        int supportIndex = spiHandlers.size();
+        int inputIndex = ctx.getHandlerIndex();
+        int nextHandlerIndex = spiHandlers.size();
         // 直接跳到下一个支持的索引值
-        for (int i = inputIndex; i < spiHandlers.size(); i++) {
+        for (int i = inputIndex + 1; i < spiHandlers.size(); i++) {
             if (getSupportIndices(ctx.getMetaMethod()).contains(i)) {
-                supportIndex = i;
+                nextHandlerIndex = i;
                 break;
             }
         }
-        if (inputIndex != supportIndex) {
-            ctx.getMetaMethod().handleReset(supportIndex);
-        }
+        // copy 一份，解决多线程持有 ctx 的问题
+        ctx = ctx.copy(nextHandlerIndex);
         // 调用原始方法
-        if (spiHandlers.size() == supportIndex) {
-            return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
+        if (spiHandlers.size() == nextHandlerIndex) {
+            // 赋值标志位，递归调用原始方法，然后会调用原始逻辑
+            ctx.getMetaMethod().setInvokeMethodType(InvokeMethodType.ORIGIN);
+            try {
+                return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
+            } finally {
+                ctx.getMetaMethod().setInvokeMethodType(InvokeMethodType.AOP);
+            }
         }
         // 调用链式处理
-        Object result = spiHandlers.get(supportIndex).processAround(ctx);
-        // 没有调用 ctx.proceed() 直接返回结果
-        if ((supportIndex + 1) != ctx.getMetaMethod().getHandlerIndex()) {
-            return result;
-        }
-        return processAround(ctx);
+        return spiHandlers.get(nextHandlerIndex).processAround(ctx);
     }
 
     /**
@@ -119,8 +120,8 @@ public class FastAspectSpiHandler implements FastAspectHandler {
     @Override
     public boolean support(MetaMethod metaMethod) {
         Set<Integer> supportIndices = getSupportIndices(metaMethod);
-        // handlerIndex 从 -1 开始的所以这里是大于 handlerIndex + 1
-        return supportIndices.size() > 0 && spiHandlers.size() > metaMethod.getHandlerIndex() + 1;
+        // 当前方法有支持的切面逻辑且线程标识为调用下一个切面逻辑
+        return supportIndices.size() > 0 && metaMethod.getInvokeMethodType() == InvokeMethodType.AOP;
     }
 
     /**

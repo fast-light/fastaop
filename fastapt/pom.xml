@@ -13,6 +13,12 @@
     <artifactId>fastapt</artifactId>
     <version>${fast.version}</version>
 
+    <name>fastapt</name>
+    <description>java fast annotation processor tool</description>
+    <url>https://github.com/fast-light/fastaop</url>
+
+    <packaging>jar</packaging>
+
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>

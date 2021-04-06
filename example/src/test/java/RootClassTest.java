@@ -17,9 +17,9 @@ public class RootClassTest {
     @FastAspect
     @Test
     public void noPackage() {
-        @FastAspectVar FastAspectContext ctx = FastAspectContext.currentContext();
-        Method method = new Object() {
-        }.getClass().getEnclosingMethod();
+        @FastAspectVar
+        FastAspectContext ctx = FastAspectContext.currentContext();
+        Method method = new Object() {}.getClass().getEnclosingMethod();
         CtxAsserts.assertEq(ctx, RootClassTest.class, method);
     }
 }

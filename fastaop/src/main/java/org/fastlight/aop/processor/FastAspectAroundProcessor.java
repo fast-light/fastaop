@@ -8,7 +8,7 @@ import org.fastlight.apt.processor.BaseFastSpiProcessor;
  * @author ychost@outlook.com
  * @date 2021-03-28
  */
-public class FastAspectMarkProcessor extends BaseFastSpiProcessor<FastAspectAround> {
+public class FastAspectAroundProcessor extends BaseFastSpiProcessor<FastAspectAround> {
 
     @Override
     protected Class<?> supportSpiTypes() {
