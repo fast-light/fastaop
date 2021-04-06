@@ -182,7 +182,7 @@ public class FastAspectContext {
     }
 
     /**
-     * 生成的代码调用入口，仅支持单线程调用！不能切换线程
+     * 生成的代码调用入口，也可看做无跑出异常的 proceed
      */
     public Object invoke(Object... args) {
         try {

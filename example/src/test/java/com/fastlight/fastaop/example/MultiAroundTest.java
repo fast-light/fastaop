@@ -7,6 +7,7 @@ import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectAround;
 import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.aop.handler.FastAspectContext;
+import org.fastlight.apt.model.MetaMethod;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,6 +38,11 @@ public class MultiAroundTest {
     @FastAspectAround
     public static class Around1 implements FastAspectHandler {
         @Override
+        public boolean support(MetaMethod metaMethod) {
+            return metaMethod.containAnnotation(MultiAround.class);
+        }
+
+        @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
             if (!ctx.getMetaMethod().containAnnotation(MultiAround.class)) {
                 return ctx.proceed();
@@ -55,6 +61,11 @@ public class MultiAroundTest {
 
     @FastAspectAround
     public static class Around2 implements FastAspectHandler {
+        @Override
+        public boolean support(MetaMethod metaMethod) {
+            return metaMethod.containAnnotation(MultiAround.class);
+        }
+
         @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
             if (!ctx.getMetaMethod().containAnnotation(MultiAround.class)) {
