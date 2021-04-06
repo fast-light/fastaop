@@ -182,7 +182,7 @@ public class FastAspectContext {
     }
 
     /**
-     * 生成的代码调用入口，也可看做无跑出异常的 proceed
+     * 生成的代码调用入口，也可看做无抛出异常的 proceed
      */
     public Object invoke(Object... args) {
         try {
