@@ -1,6 +1,5 @@
 package org.fastlight.aop.handler;
 
-import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.apt.model.MetaMethod;
 
 /**

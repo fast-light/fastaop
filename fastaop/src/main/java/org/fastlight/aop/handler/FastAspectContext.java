@@ -1,10 +1,8 @@
-package org.fastlight.aop.model;
+package org.fastlight.aop.handler;
 
 import java.util.Map;
 
 import com.google.common.collect.Maps;
-import org.fastlight.aop.handler.FastAspectHandler;
-import org.fastlight.aop.handler.FastAspectHandlerBuilder;
 import org.fastlight.apt.model.MetaMethod;
 
 /**
@@ -32,7 +30,7 @@ public class FastAspectContext {
      * 每个 context 进入切面 handler 的时候都会 copy 一份，然后赋值这个为 handlerIndex
      * 可以解决多线程调用 ctx.proceed() 的问题
      */
-    private final int handlerIndex;
+    private int handlerIndex;
 
     /**
      * 方法元数据
@@ -198,10 +196,13 @@ public class FastAspectContext {
      * 切面 handler 调用入口，仅支持单线程调用
      */
     public Object proceed(Object... args) throws Exception {
+        // 调用下一个处理器，handlerIndex 从 -1 开始的
+        // 复制一份，防止多线程问题影响到 args 和 handlerIndex
+        FastAspectContext ctx = copy(handlerIndex + 1);
         if (args.length > 0) {
-            this.args = args;
+            ctx.args = args;
         }
-        return getHandler().processAround(this);
+        return getHandler().processAround(ctx);
     }
 
     /**
@@ -214,7 +215,7 @@ public class FastAspectContext {
     /**
      * 浅复制一个 context，解决多线程的问题
      */
-    public FastAspectContext copy(int handlerIndex) {
+    protected FastAspectContext copy(int handlerIndex) {
         FastAspectContext ctx = new FastAspectContext(handlerIndex);
         ctx.args = args;
         ctx.metaMethod = metaMethod;
@@ -225,8 +226,14 @@ public class FastAspectContext {
     /**
      * spi 处理的 handlers 的索引
      */
-    public int getHandlerIndex() {
+    protected int getHandlerIndex() {
         return handlerIndex;
     }
 
+    /**
+     * 设置处理器索引，禁止私自调用
+     */
+    protected void setHandlerIndex(int handlerIndex) {
+        this.handlerIndex = handlerIndex;
+    }
 }

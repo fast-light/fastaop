@@ -7,7 +7,6 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.fastlight.aop.model.FastAspectContext;
 import org.fastlight.apt.model.InvokeMethodType;
 import org.fastlight.apt.model.MetaMethod;
 
@@ -92,14 +91,13 @@ public class FastAspectSpiHandler implements FastAspectHandler {
         int inputIndex = ctx.getHandlerIndex();
         int nextHandlerIndex = spiHandlers.size();
         // 直接跳到下一个支持的索引值
-        for (int i = inputIndex + 1; i < spiHandlers.size(); i++) {
+        for (int i = inputIndex; i < spiHandlers.size(); i++) {
             if (getSupportIndices(ctx.getMetaMethod()).contains(i)) {
                 nextHandlerIndex = i;
                 break;
             }
         }
-        // copy 一份，解决多线程持有 ctx 的问题
-        ctx = ctx.copy(nextHandlerIndex);
+        ctx.setHandlerIndex(nextHandlerIndex);
         // 调用原始方法
         if (spiHandlers.size() == nextHandlerIndex) {
             // 赋值标志位，递归调用原始方法，然后会调用原始逻辑

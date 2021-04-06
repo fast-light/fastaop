@@ -1,6 +1,6 @@
 package com.fastlight.fastaop.example;
 
-import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.junit.Assert;
 
 import java.lang.reflect.Method;

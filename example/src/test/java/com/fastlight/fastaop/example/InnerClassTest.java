@@ -2,8 +2,7 @@ package com.fastlight.fastaop.example;
 
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
-import org.fastlight.aop.model.FastAspectContext;
-import org.junit.Assert;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.junit.Test;
 
 import java.util.ArrayList;

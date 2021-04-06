@@ -6,7 +6,7 @@ import java.lang.annotation.Target;
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectAround;
 import org.fastlight.aop.handler.FastAspectHandler;
-import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.junit.Assert;
 import org.junit.Test;
 

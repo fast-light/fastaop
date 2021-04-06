@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectAround;
 import org.fastlight.aop.handler.FastAspectHandler;
-import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.fastlight.apt.model.MetaAnnotation;
 import org.fastlight.apt.model.MetaMethod;
 import org.junit.Assert;

@@ -19,7 +19,7 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name.Table;
 import org.fastlight.aop.annotation.FastAspectVar;
-import org.fastlight.aop.model.FastAspectContext;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.translator.BaseFastTranslator;
 
