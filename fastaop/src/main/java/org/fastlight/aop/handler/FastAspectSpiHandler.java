@@ -88,28 +88,24 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      */
     @Override
     public Object processAround(FastAspectContext ctx) throws Exception {
-        int inputIndex = ctx.getHandlerIndex();
-        int nextHandlerIndex = spiHandlers.size();
-        // 直接跳到下一个支持的索引值
-        for (int i = inputIndex; i < spiHandlers.size(); i++) {
-            if (getSupportIndices(ctx.getMetaMethod()).contains(i)) {
-                nextHandlerIndex = i;
-                break;
-            }
+        List<Integer> supports = getSupportIndices(ctx.getMetaMethod());
+        if (supports.size() < ctx.getSupportIndex()) {
+            throw new RuntimeException(
+                "[FastAop] support index error for method " + ctx.getMetaMethod().getMethod().getName()
+            );
         }
-        ctx.setHandlerIndex(nextHandlerIndex);
         // 调用原始方法
-        if (spiHandlers.size() == nextHandlerIndex) {
-            // 赋值标志位，递归调用原始方法，然后会调用原始逻辑
-            ctx.getMetaMethod().setInvokeMethodType(InvokeMethodType.ORIGIN);
+        if (supports.size() == ctx.getSupportIndex()) {
             try {
+                // 赋值标志位，递归调用原始方法，然后会调用原始逻辑
+                ctx.getMetaMethod().setInvokeMethodType(InvokeMethodType.ORIGIN);
                 return ctx.getMetaMethod().getMethod().invoke(ctx.getThis(), ctx.getArgs());
             } finally {
                 ctx.getMetaMethod().setInvokeMethodType(InvokeMethodType.AOP);
             }
         }
         // 调用链式处理
-        return spiHandlers.get(nextHandlerIndex).processAround(ctx);
+        return spiHandlers.get(supports.get(ctx.getSupportIndex())).processAround(ctx);
     }
 
     /**
@@ -117,7 +113,7 @@ public class FastAspectSpiHandler implements FastAspectHandler {
      */
     @Override
     public boolean support(MetaMethod metaMethod) {
-        Set<Integer> supportIndices = getSupportIndices(metaMethod);
+        List<Integer> supportIndices = getSupportIndices(metaMethod);
         // 当前方法有支持的切面逻辑且线程标识为调用下一个切面逻辑
         return supportIndices.size() > 0 && metaMethod.getInvokeMethodType() == InvokeMethodType.AOP;
     }
@@ -125,8 +121,8 @@ public class FastAspectSpiHandler implements FastAspectHandler {
     /**
      * 获取支持该方法的切面索引
      */
-    protected Set<Integer> getSupportIndices(MetaMethod metaMethod) {
-        Set<Integer> supportIndices = metaMethod.getMetaExtension(SUPPORT_INDICES);
+    protected List<Integer> getSupportIndices(MetaMethod metaMethod) {
+        List<Integer> supportIndices = metaMethod.getMetaExtension(SUPPORT_INDICES);
         if (supportIndices != null) {
             return supportIndices;
         }
@@ -137,7 +133,7 @@ public class FastAspectSpiHandler implements FastAspectHandler {
             if (supportIndices != null) {
                 return supportIndices;
             }
-            supportIndices = Sets.newHashSet();
+            supportIndices = Lists.newArrayList();
             for (int i = 0; i < spiHandlers.size(); i++) {
                 if (spiHandlers.get(i).support(metaMethod)) {
                     supportIndices.add(i);

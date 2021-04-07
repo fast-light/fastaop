@@ -30,7 +30,7 @@ public class FastAspectContext {
      * 每个 context 进入切面 handler 的时候都会 copy 一份，然后赋值这个为 handlerIndex
      * 可以解决多线程调用 ctx.proceed() 的问题
      */
-    private int handlerIndex;
+    private int supportIndex;
 
     /**
      * 方法元数据
@@ -64,8 +64,8 @@ public class FastAspectContext {
         return ctx;
     }
 
-    public FastAspectContext(int handlerIndex) {
-        this.handlerIndex = handlerIndex;
+    public FastAspectContext(int supportIndex) {
+        this.supportIndex = supportIndex;
     }
 
     /**
@@ -93,7 +93,10 @@ public class FastAspectContext {
                 if (handler != null) {
                     return handler;
                 }
-                Class<FastAspectHandlerBuilder> builderClass = getMetaExtension(EXT_META_BUILDER_CLASS);
+                Class<? extends FastAspectHandlerBuilder> builderClass = getMetaExtension(EXT_META_BUILDER_CLASS);
+                if (builderClass == null) {
+                    builderClass = FastAspectSpiHandlerBuilder.class;
+                }
                 FastAspectHandlerBuilder builder = builderClass.newInstance();
                 handler = builder.build();
                 addMetaExtension(EXT_META_HANDLER, handler);
@@ -198,7 +201,7 @@ public class FastAspectContext {
     public Object proceed(Object... args) throws Exception {
         // 调用下一个处理器，handlerIndex 从 -1 开始的
         // 复制一份，防止多线程问题影响到 args 和 handlerIndex
-        FastAspectContext ctx = copy(handlerIndex + 1);
+        FastAspectContext ctx = copy(supportIndex + 1);
         if (args.length > 0) {
             ctx.args = args;
         }
@@ -224,16 +227,16 @@ public class FastAspectContext {
     }
 
     /**
-     * spi 处理的 handlers 的索引
+     * spi 处理的 supports 的索引
      */
-    protected int getHandlerIndex() {
-        return handlerIndex;
+    protected int getSupportIndex() {
+        return supportIndex;
     }
 
     /**
      * 设置处理器索引，禁止私自调用
      */
-    protected void setHandlerIndex(int handlerIndex) {
-        this.handlerIndex = handlerIndex;
+    protected void setSupportIndex(int supportIndex) {
+        this.supportIndex = supportIndex;
     }
 }

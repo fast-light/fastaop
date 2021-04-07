@@ -693,10 +693,7 @@ public abstract class BaseFastTranslator extends TreeTranslator {
             );
             return;
         }
-        ListBuffer<JCTree> defs = new ListBuffer<>();
-        defs.addAll(jcClassDecl.defs);
-        defs.add(jcVariableDecl);
-        jcClassDecl.defs = defs.toList();
+        jcClassDecl.defs = jcClassDecl.defs.append(jcVariableDecl);
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.Optional;
 import javax.annotation.processing.Messager;
 
 import com.sun.tools.javac.code.Type;
+import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
@@ -234,7 +235,10 @@ public class FastAspectTranslator extends BaseFastTranslator {
      */
     protected JCExpression builderExpression() {
         Type builder = ctxCompile.getExtension("builder");
-        return treeMaker.ClassLiteral(builder);
+        if (builder != null) {
+            return treeMaker.ClassLiteral(builder);
+        }
+        return treeMaker.Literal(TypeTag.BOT, null);
     }
 
 }

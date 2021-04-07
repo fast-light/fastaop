@@ -1,4 +1,4 @@
-import com.fastlight.fastaop.example.CtxAsserts;
+import org.fastlight.fastaop.example.CtxAsserts;
 import org.fastlight.aop.annotation.FastAspect;
 import org.fastlight.aop.annotation.FastAspectVar;
 import org.fastlight.aop.handler.FastAspectContext;

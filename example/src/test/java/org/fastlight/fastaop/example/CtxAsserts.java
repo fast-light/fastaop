@@ -1,4 +1,4 @@
-package com.fastlight.fastaop.example;
+package org.fastlight.fastaop.example;
 
 import org.fastlight.aop.handler.FastAspectContext;
 import org.junit.Assert;

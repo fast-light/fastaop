@@ -27,7 +27,9 @@ import javax.tools.StandardLocation;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
+import org.apache.commons.lang3.StringUtils;
 
 import static com.google.common.base.Charsets.UTF_8;
 
@@ -95,6 +97,7 @@ public abstract class BaseFastSpiProcessor<T extends Annotation> extends BaseFas
         try {
             generateConfigFiles();
         } catch (Exception e) {
+            logError("[FastAop] Generate SPI files error");
             throw new RuntimeException(e);
         }
     }
@@ -113,22 +116,23 @@ public abstract class BaseFastSpiProcessor<T extends Annotation> extends BaseFas
     protected synchronized void generateConfigFiles() throws IOException {
         for (String type : providers.keySet()) {
             Filer filer = environment.getFiler();
-            // 修复 windows filePath 以 /c:/Users/uuu.. 无法 create folder 的问题
-            URI folderUri = filer.getResource(StandardLocation.CLASS_OUTPUT, "", getFolderPath()).toUri();
-            URI fileUri = filer.getResource(StandardLocation.CLASS_OUTPUT, "", getFilePath(type)).toUri();
+            URI fileUri = filer.getResource(StandardLocation.CLASS_OUTPUT, StringUtils.EMPTY,
+                getFilePath(type)).toUri();
             File serviceFile = new File(fileUri);
-            if (!serviceFile.exists()) {
-                Files.createDirectories(Paths.get(folderUri));
-                Files.write(Paths.get(fileUri), new byte[0], StandardOpenOption.CREATE);
+            serviceFile.getParentFile().mkdirs();
+            Set<String> services = Sets.newTreeSet();
+            // 如果文件存在才去读取
+            if (!serviceFile.createNewFile()) {
+                // 保障顺序
+                services = ServicesFiles.readServiceFile(new FileInputStream(serviceFile));
             }
-            Set<String> services = ServicesFiles.readServiceFile(new FileInputStream(serviceFile));
             Set<String> newServices = new HashSet<>(providers.get(type));
             if (services.containsAll(newServices)) {
                 return;
             }
             services.addAll(newServices);
             Path path = Paths.get(fileUri);
-            Files.write(path, Joiner.on("\n").join(services).getBytes(), StandardOpenOption.WRITE);
+            Files.write(path, Joiner.on("\n").join(services).getBytes(), StandardOpenOption.APPEND);
         }
 
     }

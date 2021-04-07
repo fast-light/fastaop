@@ -69,6 +69,16 @@ public class MetaMethod {
     }
 
     /**
+     * 是否方法/类上面含某个注解
+     */
+    public boolean containAnnotationWithOwner(Class<? extends Annotation> cls) {
+        if (containAnnotation(cls)) {
+            return true;
+        }
+        return Arrays.stream(metaOwner.getAnnotations()).anyMatch(v -> cls.equals(v.getType()));
+    }
+
+    /**
      * 获取注解元数据，如果不存在就返回 null
      */
     public MetaAnnotation getAnnotation(Class<? extends Annotation> cls) {
