@@ -10,4 +10,11 @@ public class FastCollections {
     public static boolean isEmpty(Collection<?> collection) {
         return collection == null || collection.isEmpty();
     }
+
+    public static int size(Collection<?> collection) {
+        if (isEmpty(collection)) {
+            return 0;
+        }
+        return collection.size();
+    }
 }

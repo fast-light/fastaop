@@ -1,20 +1,25 @@
 package org.fastlight.aop.translator;
 
+import java.util.Optional;
+
 import javax.annotation.processing.Messager;
 
 import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCReturn;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name.Table;
+import org.apache.commons.lang3.StringUtils;
 import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.translator.BaseFastTranslator;
@@ -39,7 +44,18 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
      * 是否已经覆写了 support 方法
      */
     public boolean isOverrideSupport(JCClassDecl jcClassDecl) {
-        return containMethod(jcClassDecl, SUPPORT_METHOD, m -> FastCollections.isEmpty(m.params));
+        return containMethod(jcClassDecl, SUPPORT_METHOD, m -> {
+            if (FastCollections.size(m.params) != 1) {
+                return false;
+            }
+            // 含有一个参数且参数类型是 MetaMethod
+            return Optional.of(m.params.get(0)).map(v -> v.vartype)
+                .filter(v -> v instanceof JCIdent)
+                .map(v -> ((JCIdent)v).sym)
+                .map(Symbol::toString)
+                .orElse(StringUtils.EMPTY)
+                .equals(MetaMethod.class.getName());
+        });
     }
 
     /**
