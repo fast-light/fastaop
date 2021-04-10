@@ -7,7 +7,7 @@
     <groupId>org.fastlight</groupId>
     <artifactId>fastaop-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <modules>
         <module>fastapt</module>
         <module>fastaop</module>
@@ -17,7 +17,7 @@
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <fast.version>1.0.0</fast.version>
+        <fast.version>1.0.1</fast.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <name>fastaop-parent</name>

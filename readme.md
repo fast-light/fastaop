@@ -42,7 +42,7 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
 <dependency>
   <groupId>org.fastlight</groupId>
   <artifactId>fastaop</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```
 ## 二、添加切面
