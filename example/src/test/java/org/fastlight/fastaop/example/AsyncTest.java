@@ -69,7 +69,7 @@ public class AsyncTest {
 
         @Override
         public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(Async.class);
+            return metaMethod.isAnnotated(Async.class);
         }
 
         /**

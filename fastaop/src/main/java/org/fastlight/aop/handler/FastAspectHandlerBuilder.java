@@ -8,7 +8,7 @@ package org.fastlight.aop.handler;
  */
 public interface FastAspectHandlerBuilder {
     /**
-     * 构造一个切面执行器，会通过 {@link org.fastlight.apt.annotation.FastAspect} 生成的代码直接引用
+     * 构造一个切面执行器，会通过 {@link org.fastlight.aop.annotation.FastAspect} 生成的代码直接引用
      *
      * @return 切面执行器
      */

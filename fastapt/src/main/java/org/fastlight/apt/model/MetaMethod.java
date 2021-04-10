@@ -64,18 +64,18 @@ public class MetaMethod {
     /**
      * 是否方法上面包含某个注解
      */
-    public boolean containAnnotation(Class<? extends Annotation> cls) {
+    public boolean isAnnotated(Class<? extends Annotation> cls) {
         return Arrays.stream(annotations).anyMatch(v -> cls.equals(v.getType()));
     }
 
     /**
      * 是否方法/类上面含某个注解
      */
-    public boolean containAnnotationWithOwner(Class<? extends Annotation> cls) {
-        if (containAnnotation(cls)) {
+    public boolean isAnnotatedWithOwner(Class<? extends Annotation> cls) {
+        if (isAnnotated(cls)) {
             return true;
         }
-        return Arrays.stream(metaOwner.getAnnotations()).anyMatch(v -> cls.equals(v.getType()));
+        return metaOwner.isAnnotated(cls);
     }
 
     /**

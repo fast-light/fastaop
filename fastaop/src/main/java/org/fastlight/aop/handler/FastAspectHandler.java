@@ -10,13 +10,15 @@ import org.fastlight.apt.model.MetaMethod;
  */
 public interface FastAspectHandler {
 
+    int DEFAULT_ORDER = 0;
+
     /**
      * 执行顺序，数字越小越先执行
      *
      * @return 执行顺序
      */
     default int getOrder() {
-        return 0;
+        return DEFAULT_ORDER;
     }
 
     /**

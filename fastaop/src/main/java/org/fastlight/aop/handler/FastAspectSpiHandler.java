@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.fastlight.apt.model.InvokeMethodType;
@@ -23,9 +24,9 @@ public class FastAspectSpiHandler implements FastAspectHandler {
     public static final String SUPPORT_INDICES = "fast.supportIndices";
 
     /**
-     * SPI 注入进来的执行器
+     * SPI 注入进来的执行器，不可变类型
      */
-    private final List<FastAspectHandler> spiHandlers = Lists.newArrayList();
+    private volatile List<FastAspectHandler> spiHandlers = ImmutableList.of();
 
     /**
      * 初始化标志
@@ -68,15 +69,16 @@ public class FastAspectSpiHandler implements FastAspectHandler {
                 return;
             }
             try {
-                spiHandlers.clear();
+                List<FastAspectHandler> handlers = Lists.newArrayList();
                 ServiceLoader<FastAspectHandler> serviceLoader = ServiceLoader.load(FastAspectHandler.class);
                 for (FastAspectHandler handler : serviceLoader) {
                     // 防止重复添加
-                    if (spiHandlers.stream().noneMatch(v -> v.getClass().equals(handler.getClass()))) {
-                        spiHandlers.add(handler);
+                    if (handlers.stream().noneMatch(v -> v.getClass().equals(handler.getClass()))) {
+                        handlers.add(handler);
                     }
                 }
-                spiHandlers.sort(Comparator.comparingInt(FastAspectHandler::getOrder));
+                handlers.sort(Comparator.comparingInt(FastAspectHandler::getOrder));
+                spiHandlers = ImmutableList.copyOf(handlers);
             } finally {
                 isInit = true;
             }

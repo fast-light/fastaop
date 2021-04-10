@@ -82,7 +82,7 @@ public class FastAspectContext {
     /**
      * 构造一个 Handler，线程安全的，通过缓存来优化性能
      */
-    public FastAspectHandler getHandler() {
+    protected FastAspectHandler getHandler() {
         try {
             FastAspectHandler handler = getMetaExtension(EXT_META_HANDLER);
             if (handler != null) {
@@ -218,8 +218,8 @@ public class FastAspectContext {
     /**
      * 浅复制一个 context，解决多线程的问题
      */
-    protected FastAspectContext copy(int handlerIndex) {
-        FastAspectContext ctx = new FastAspectContext(handlerIndex);
+    protected FastAspectContext copy(int supportIndex) {
+        FastAspectContext ctx = new FastAspectContext(supportIndex);
         ctx.args = args;
         ctx.metaMethod = metaMethod;
         ctx.owner = owner;

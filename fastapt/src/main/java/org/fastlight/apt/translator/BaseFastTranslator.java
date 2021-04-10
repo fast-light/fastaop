@@ -717,6 +717,20 @@ public abstract class BaseFastTranslator extends TreeTranslator {
     }
 
     /**
+     * 是否包含某个方法，可注入 checker 判断重载
+     */
+    public boolean containMethod(JCClassDecl jcClassDecl, String method, Function<JCMethodDecl, Boolean> checker) {
+        for (JCTree def : jcClassDecl.defs) {
+            if (def instanceof JCMethodDecl && method.equals(((JCMethodDecl)def).name.toString())) {
+                if (checker != null && Boolean.TRUE.equals(checker.apply((JCMethodDecl)def))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * String -> Name
      *
      * @param str 常规的字符串

@@ -39,12 +39,12 @@ public class MultiAroundTest {
     public static class Around1 implements FastAspectHandler {
         @Override
         public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(MultiAround.class);
+            return metaMethod.isAnnotated(MultiAround.class);
         }
 
         @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
-            if (!ctx.getMetaMethod().containAnnotation(MultiAround.class)) {
+            if (!ctx.getMetaMethod().isAnnotated(MultiAround.class)) {
                 return ctx.proceed();
             }
             if ("m1".equals(ctx.getArgs()[0])) {
@@ -63,12 +63,12 @@ public class MultiAroundTest {
     public static class Around2 implements FastAspectHandler {
         @Override
         public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(MultiAround.class);
+            return metaMethod.isAnnotated(MultiAround.class);
         }
 
         @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
-            if (!ctx.getMetaMethod().containAnnotation(MultiAround.class)) {
+            if (!ctx.getMetaMethod().isAnnotated(MultiAround.class)) {
                 return ctx.proceed();
             }
             return "m2";

@@ -47,19 +47,20 @@ public class FastCalculatorTest {
     /**
      * 修复 calc 的切面
      */
-    @FastAspectAround
+    @FastAspectAround(support = CalcRepair.class, order = 1)
     public static class CalcRepairHandler implements FastAspectHandler {
 
         @Override
-        public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(CalcRepair.class);
-        }
-
-        @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
+            Assert.assertEquals(123, getOrder());
             int a = (int)ctx.getArgs()[0];
             int b = (int)ctx.getArgs()[1];
             return a + b;
+        }
+
+        @Override
+        public int getOrder() {
+            return 123;
         }
     }
 }

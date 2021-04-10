@@ -26,17 +26,18 @@ public class FastAspectAroundProcessor extends BaseFastSpiProcessor<FastAspectAr
     public void processTypeElement(TypeElement typeElement, AnnotationMirror atm) {
         super.processTypeElement(typeElement, atm);
         Type supportType = getAtValueData(atm, "support");
-        // 默认不覆盖 support 方法
-        if ((FastNone.class.getName()).equals(supportType.toString())) {
-            return;
-        }
+        int order = Integer.parseInt(getAtValueData(atm, "order").toString());
         FastAspectAroundTranslator translator = getTranslator();
         JCClassDecl jcClassDecl = javacTrees.getTree(typeElement);
-        // 对于已经覆写了 support 的就不做变更了
-        if (translator.isOverrideSupport(jcClassDecl)) {
-            return;
+        // 覆盖 getOrder 和 support 方法
+        if (!((FastNone.class.getName()).equals(supportType.toString())
+            && !translator.isOverrideSupport(jcClassDecl))) {
+            translator.addSupportMethod(jcClassDecl, supportType);
         }
-        translator.addSupportMethod(jcClassDecl, supportType);
+        if (order != FastAspectHandler.DEFAULT_ORDER
+            && !translator.isOverrideGetOrder(jcClassDecl)) {
+            translator.addGetOrder(jcClassDecl, order);
+        }
     }
 
     public FastAspectAroundTranslator getTranslator() {

@@ -1,5 +1,8 @@
 package org.fastlight.apt.model;
 
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
+
 /**
  * @author ychost@outlook.com
  * @date 2021-03-27
@@ -34,5 +37,12 @@ public class MetaType {
 
     public MetaAnnotation[] getAnnotations() {
         return annotations;
+    }
+
+    /**
+     * 是否类上面包含某个注解
+     */
+    public boolean isAnnotated(Class<? extends Annotation> cls) {
+        return Arrays.stream(annotations).anyMatch(v -> cls.equals(v.getType()));
     }
 }

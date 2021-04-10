@@ -10,13 +10,15 @@ import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
+import com.sun.tools.javac.tree.JCTree.JCReturn;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
-import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name.Table;
+import org.fastlight.aop.handler.FastAspectHandler;
 import org.fastlight.apt.model.MetaMethod;
 import org.fastlight.apt.translator.BaseFastTranslator;
+import org.fastlight.apt.util.FastCollections;
 
 /**
  * @author ychost@outlook.com
@@ -24,6 +26,7 @@ import org.fastlight.apt.translator.BaseFastTranslator;
  */
 public class FastAspectAroundTranslator extends BaseFastTranslator {
     public static final String SUPPORT_METHOD = "support";
+    public static final String GET_ORDER_METHOD = "getOrder";
     public static final String META_METHOD_PARAM = "metaMethod";
 
     public FastAspectAroundTranslator(TreeMaker treeMaker,
@@ -36,12 +39,14 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
      * 是否已经覆写了 support 方法
      */
     public boolean isOverrideSupport(JCClassDecl jcClassDecl) {
-        for (JCTree def : jcClassDecl.defs) {
-            if (def instanceof JCMethodDecl && SUPPORT_METHOD.equals(((JCMethodDecl)def).name.toString())) {
-                return true;
-            }
-        }
-        return false;
+        return containMethod(jcClassDecl, SUPPORT_METHOD, m -> FastCollections.isEmpty(m.params));
+    }
+
+    /**
+     * 是否已经覆写了 getOrder() 方法
+     */
+    public boolean isOverrideGetOrder(JCClassDecl jcClassDecl) {
+        return containMethod(jcClassDecl, GET_ORDER_METHOD, m -> FastCollections.isEmpty(m.params));
     }
 
     /**
@@ -49,7 +54,7 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
      * @formatter:off
      * <example>
      *     public boolean support(MetaMethod metaMethod){
-     *         return metaMethod.containAnnotationWithOwner(CustomerAnnotation.class)
+     *         return metaMethod.isAnnotatedWithOwner(CustomerAnnotation.class)
      *     }
      * </example>
      * @formatter:on
@@ -67,7 +72,7 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
         );
         JCExpression supportExpression = treeMaker.Apply(
             List.nil(),
-            memberAccess(META_METHOD_PARAM + ".containAnnotationWithOwner"),
+            memberAccess(META_METHOD_PARAM + ".isAnnotatedWithOwner"),
             List.of(classLiteral(supportType))
         );
         JCBlock methodBlock = treeMaker.Block(0, List.of(
@@ -85,5 +90,39 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
             null
         );
         jcClassDecl.defs = jcClassDecl.defs.append(supportMethod);
+    }
+
+    /**
+     * 新增 getOrder 方法 {@link FastAspectHandler#getOrder()}
+     *
+     * @formatter:off
+     * <example>
+     *     public int getOrder(){
+     *         return 3;
+     *     }
+     * </example>
+     * @formatter:on
+     */
+    public void addGetOrder(JCClassDecl jcClassDecl, Integer order) {
+        if (isOverrideGetOrder(jcClassDecl)) {
+            logWarn(String.format("[FastAop] class %s is contain getOrder method", jcClassDecl.name.toString()));
+            return;
+        }
+        JCReturn jcReturn = treeMaker.Return(
+            treeMaker.Literal(TypeTag.INT, order)
+        );
+        JCBlock methodBlock = treeMaker.Block(0, List.of(jcReturn));
+        JCTree.JCAnnotation override = treeMaker.Annotation(memberAccess("java.lang.Override"), List.nil());
+        JCMethodDecl getOrderMethod = treeMaker.MethodDef(
+            treeMaker.Modifiers(Flags.PUBLIC, List.of(override)),
+            getNameFromString(GET_ORDER_METHOD),
+            treeMaker.TypeIdent(TypeTag.INT),
+            List.nil(),
+            List.nil(),
+            List.nil(),
+            methodBlock,
+            null
+        );
+        jcClassDecl.defs = jcClassDecl.defs.append(getOrderMethod);
     }
 }

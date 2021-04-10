@@ -30,17 +30,17 @@ public class CustomDefinedTest {
 
     }
 
-    @FastAspectAround(support = LogAccess.class)
+    @FastAspectAround(support = LogAccess.class, order = 100)
     public static class LogAccessHandler implements FastAspectHandler {
 
         @Override
         public Object processAround(FastAspectContext ctx) throws Exception {
+            Assert.assertEquals(100, getOrder());
             String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             System.out.printf("[%s] -- %s", time, ctx.getMetaMethod().getName());
             isLogged = true;
             return ctx.proceed();
         }
-
 
     }
 }
