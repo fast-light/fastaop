@@ -37,100 +37,59 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
 
 ## 使用
 
-### 一、引入依赖
-1. 如果 IDEA 报空指针，配置如下：setting->build->compiler->Shared build process VM options
-> -Djps.track.ap.dependencies=false
-
-> 如果 在 IDEA 里面运行 example 报错，请在项目根目录先执行 mvn clean 再去 IDEA 里面运行
-
+## 一、引入依赖
 ```xml
-
 <dependency>
-    <groupId>org.fastlight</groupId>
-    <artifactId>fastaop</artifactId>
-    <version>1.0.0</version>
+  <groupId>org.fastlight</groupId>
+  <artifactId>fastaop</artifactId>
+  <version>1.0.0</version>
 </dependency>
 ```
-
-### 二、添加切面
-
-这里使用了一个简单的 LogHandler 去打印了方法信息，关注点如下：
-
-1. @FastAspectAround 标记切面逻辑
-   
-   > 标记的类必须含有无参构造函数，执行的时候会以单例模式运行
-1. 实现 FastAspectHandler 接口，覆盖 processAround 方法
-   
-   > 原方法为 ctx.proceed(...args)，如果不注入 args 那么以原始参数执行原方法
-1. getOrder() 来决定多个切面逻辑的执行顺序
-
-   > order 小的先执行
-
-1. support() 结果对于每个 MetaMethod 都会全局缓存用于提升切面执行效率
-
+## 二、添加切面
+### 2.1 添加切面逻辑
 ```java
 /**
- * @author ychost@outlook.com
- * @date 2021-03-28
+ * 打印方法的调用时间
  */
-@FastAspectAround
-public class LogHandler implements FastAspectHandler {
+@Target(ElementType.METHOD)
+public @interface LogAccess {
+}
 
+@FastAspectAround(support = LogAccess.class, order=1)
+public class LogHandler implements FastAspectHandler {
+    /**
+     * 环绕模式切入方法体
+     */
     @Override
     public Object processAround(FastAspectContext ctx) throws Exception {
-        System.out.printf("[processAround] %s.%s \n", ctx.getMetaMethod().getMetaOwner().getType().getName(),
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        System.out.printf("[%s] -- [%s.%s]\n", time,
+            ctx.getMetaMethod().getMetaOwner().getType().getName(),
             ctx.getMetaMethod().getName()
         );
         return ctx.proceed();
     }
-
-    @Override
-    public int getOrder() {
-        return 1;
-    }
-
-    /**
-     * 判断是否切入某个方法，该 support 决定了后面的 processAround 是否被调用，结果会被缓存（提高执行效率）
-     * 如果想动态调整对某个方法的支持，请返回 true，且在 processAround 进行判断
-     * 默认返回为 true
-     */
-    @Override
-    public boolean support(MetaMethod metaMethod) {
-        return true;
-    }
 }
 ```
-
-### 三、使用切面
-
-使用切面的方法如下：
-
-1. 在需要切入的 Class 或者 Method 上面添加 @FastAspect 即可
-1. 可通过 @FastAspectVar 直接在方法内部使用切面上下文
+### 2.2 加入切面注解
+在 src/main/resources/META-INF/aspect/fast.aspect.supports.txt 加入 LogAccess 注解全路径
 
 ```java
-/**
- * 一个简单的 FastAop 调用 demo
- *
- * @author ychost@outlook.com
- * @date 2021-03-27
- */
-public class AopExample {
-    public static void main(String[] args) {
-        String fastAop = hello("[FastAop]");
-        System.out.println("hello: " + fastAop);
-    }
+// 替换成自己的注解路径
+org.fastlight.fastaop.example.handler.LogAccess
+```
 
-    @FastAspect
-    public static String hello(String name) {
-        @FastAspectVar
-        FastAspectContext ctx = FastAspectContext.currentContext();
-        return String.valueOf(ctx.getArgs()[0]);
-    }
+## 三、使用切面
+
+```java
+
+@LogAccess
+public static void main(String[] args) {
+  System.out.println("[FastAop Hello]");
 }
-// output
-// [processAround] org.fastlight.fastaop.example.AopExample.hello 
-// hello: [FastAop]
+//输出
+//[2021-04-10 15:42:03] -- [org.fastlight.fastaop.example.AopExample.main]
+//[FastAop Hello]  
 ```
 
 ## 切面上下文
@@ -160,64 +119,6 @@ FastAspectContext#getMetaMethod()
 | method         | 反射获取的方法信息，有缓存仅静态初始化的时候执行反射 |
 | metaExtensions | 元数据扩展，生命周期为全局，仅在当前 Method 可见     |
 
-## 最佳实践
-
-这里通过切面逻辑实现了修复一个 add 方法的运算，且仅仅针对于标注了 @CalcRepair 的方法做修复
-
-```java
-/**
- * 修复一个损坏的计算器
- *
- * @author ychost@outlook.com
- * @date 2021-04-02
- */
-@FastAspect
-public class FastCalculatorTest {
-
-    /**
-     * 单测入口
-     */
-    @Test
-    public void calcTest() {
-        int res = add(3, 2);
-        Assert.assertEquals(5, res);
-    }
-
-    /**
-     * 待修复的加法逻辑
-     */
-    @CalcRepair
-    int add(int a, int b) {
-        throw new RuntimeException("this is a broken calculator");
-    }
-
-    /**
-     * 修复注解
-     */
-    @Target(ElementType.METHOD)
-    public @interface CalcRepair {
-    }
-
-    /**
-     * 修复 calc 的切面
-     */
-    @FastAspectAround
-    public static class CalcRepairHandler implements FastAspectHandler {
-        @Override
-        public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(CalcRepair.class);
-        }
-
-        @Override
-        public Object processAround(FastAspectContext ctx) throws Exception {
-            int a = (int)ctx.getArgs()[0];
-            int b = (int)ctx.getArgs()[1];
-            return a + b;
-        }
-    }
-}
-```
-
 
 
 ## 原理
@@ -238,65 +139,26 @@ public class FastCalculatorTest {
 /**
  * 反编译后的代码，隐藏了元数据 create 细节
  */
-public class FastCalculatorTest {
+public class AopExample {
     private static final MetaType __fast_meta_owner = MetaType.create(...);
-    private static final MetaMethod[] __fast_meta_method;
-
-    public FastCalculatorTest() {
-    }
-
-    //@FastMarkedMethod(0) 为编译添加，用于精准定位 Method
-    @Test
+    private static final MetaMethod[] __fast_meta_method = new MetaMethod[]{...};
+  
+    // @FastMarkedMethod(..) 为编译添加注解，方便 Method 精准定位
     @FastMarkedMethod(0)
-    public void calcTest() {
-        // 编译新增代码，所有标记的方法都会埋入这几行代码
-        // 1. 生产切面上下文
-        FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[0], this, new Object[0]);
-        // 2. 检查是否有切面支持该方法
-        if (__fast_context.support()) {
-            // 3. 调用切面逻辑，里面是递归调用，最终会根 MetaMethod 的 ThreadLocal 索引条件
-            // 再调用最多 1 次 calcTest() 且 __fast_context.support() 返回 false，执行原始代码
-            // 如果切面逻辑里面没有调用 ctx.proceed() 那么，原始代码不会被执行，逻辑会立即 return
+    @LogAccess
+    public static void main(String[] args) {
+      // 1. 生成切面上下文 
+      FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[0], (Object)null, new Object[]{args});
+      // 2. 调用切面逻辑 
+      if (__fast_context.support()) {
             __fast_context.invoke(new Object[0]);
-            return;
-        } 
-        // 原始代码
-        int res = this.add(3, 2);
-        Assert.assertEquals(5L, (long)res);   
+        	  return;
+         }
+      // 3. ctx.proceed() 会回调原始逻辑
+      System.out.println("[FastAop Hello]");
     }
 
-    @FastMarkedMethod(1)
-    @FastCalculatorTest.CalcRepair
-    int add(int a, int b) {
-        FastAspectContext __fast_context = FastAspectContext.create(__fast_meta_method[1], this, new Object[]{a, b});
-        if (__fast_context.support()) {
-            return (Integer)__fast_context.invoke(new Object[0]);
-        } else {
-            throw new RuntimeException("this is a broken calculator");
-        }
-    }
-
-    static {
-        __fast_meta_method = new MetaMethod[]{...}
-    }
-    public static class CalcRepairHandler implements FastAspectHandler {
-        public CalcRepairHandler() {
-        }
-
-        public boolean support(MetaMethod metaMethod) {
-            return metaMethod.containAnnotation(FastCalculatorTest.CalcRepair.class);
-        }
-
-        public Object processAround(FastAspectContext ctx) throws Exception {
-            int a = (Integer)ctx.getArgs()[0];
-            int b = (Integer)ctx.getArgs()[1];
-            return a + b;
-        }
-    }
-
-    @Target({ElementType.METHOD})
-    public @interface CalcRepair {
-    }
 }
+
 ```
 

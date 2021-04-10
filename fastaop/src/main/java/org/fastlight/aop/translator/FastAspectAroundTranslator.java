@@ -86,6 +86,9 @@ public class FastAspectAroundTranslator extends BaseFastTranslator {
             memberAccess("org.fastlight.apt.model.MetaMethod"),
             null
         );
+        // 这句必不可少，否者会报错
+        // java.lang.AssertionError: Value of x -1
+        metaMethodParam.pos = jcClassDecl.pos;
         JCExpression supportExpression = treeMaker.Apply(
             List.nil(),
             memberAccess(META_METHOD_PARAM + ".isAnnotatedWithOwner"),

@@ -17,11 +17,6 @@ public class FastAspectContext {
     public static final String EXT_META_BUILDER_CLASS = "fast.meta_handler_builder_class";
 
     /**
-     * handler 实例
-     */
-    public static final String EXT_META_HANDLER = "fast.meta_handler";
-
-    /**
      * 构造 handler 的时候需要线程安全
      */
     public static final Object HANDLER_LOCKER = new Object();
@@ -80,26 +75,31 @@ public class FastAspectContext {
     }
 
     /**
+     * 全局 Handler 缓存
+     */
+    private static final Map<Class<?>, FastAspectHandler> HANDLER_MAP = Maps.newHashMap();
+
+    /**
      * 构造一个 Handler，线程安全的，通过缓存来优化性能
      */
     protected FastAspectHandler getHandler() {
         try {
-            FastAspectHandler handler = getMetaExtension(EXT_META_HANDLER);
+            Class<? extends FastAspectHandlerBuilder> builderClass = getMetaExtension(EXT_META_BUILDER_CLASS);
+            if (builderClass == null) {
+                builderClass = FastAspectSpiHandlerBuilder.class;
+            }
+            FastAspectHandler handler = HANDLER_MAP.get(builderClass);
             if (handler != null) {
                 return handler;
             }
             synchronized (HANDLER_LOCKER) {
-                handler = getMetaExtension(EXT_META_HANDLER);
+                handler = HANDLER_MAP.get(builderClass);
                 if (handler != null) {
                     return handler;
                 }
-                Class<? extends FastAspectHandlerBuilder> builderClass = getMetaExtension(EXT_META_BUILDER_CLASS);
-                if (builderClass == null) {
-                    builderClass = FastAspectSpiHandlerBuilder.class;
-                }
                 FastAspectHandlerBuilder builder = builderClass.newInstance();
                 handler = builder.build();
-                addMetaExtension(EXT_META_HANDLER, handler);
+                HANDLER_MAP.put(builderClass, handler);
                 return handler;
             }
         } catch (Exception e) {
