@@ -109,6 +109,13 @@
             <id>ossrh</id>
             <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
+        <!--        1. 屏蔽 nexus-staging-maven-plugin 插件-->
+        <!--        2. 屏蔽 ossrh repository 开启 github repository-->
+        <!--        3. mvn deploy -Dregistry=https://maven.pkg.github.com/fast-light -Dtoken=GITHUB_TOKEN -->
+        <!--        <repository>-->
+        <!--            <id>github</id>-->
+        <!--            <url>https://maven.pkg.github.com/fast-light/fastaop</url>-->
+        <!--        </repository>-->
     </distributionManagement>
     <build>
         <plugins>
