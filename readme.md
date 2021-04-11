@@ -16,28 +16,14 @@ Java 高性能 AOP 框架
 
 ## 框架简介
 
-FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树并织入切面代码从而实现了 AOP 的功能，相较于传统的 AspectJ、Spring-AOP 框架有如下特点：
+FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树并织入切面代码从而实现了 AOP 的功能。
 
-1. ✨依赖干净，无需 Spring 等环境
-
-1. ✨使用简单，仅需两个注解就能实现切面功能
-
-1. ✨性能好，由于是编译过程中植入原生代码，所以性能几乎无损
-
-1. ✨功能强大，支持 private、static 等各种方法切面，内部方法相互调用也会过切面逻辑
-
-1. ✨扩展性好，提供了特定注解，能够在方法内部拿到当前切面上下文，便于做一些临时操作
-
-   > @FastAspectVar
-   >  FastAspectContext ctx = FastAspectContext.currentContext();
-
-1. ✨支持 Around 模式，使用上和 AspectJ 类似，能够完整控制方法的执行逻辑
-
-1. ✨可以基于此工程在编译期间生成任何模板代码
+> FastAop 对运行时无要求，无须 Spring，AspectJ，CGLib 等特殊依赖，默认支持 static/private/protected 等方法切入，同属一个类的方法之间调用也会过切面逻辑
 
 ## 使用
 
-## 一、引入依赖
+### 一、引入依赖
+
 ```xml
 <dependency>
   <groupId>org.fastlight</groupId>
@@ -45,8 +31,8 @@ FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和
   <version>1.0.1</version>
 </dependency>
 ```
-## 二、添加切面
-### 2.1 添加切面逻辑
+### 二、添加切面
+#### 2.1 添加切面逻辑
 ```java
 /**
  * 打印方法的调用时间
@@ -71,7 +57,7 @@ public class LogHandler implements FastAspectHandler {
     }
 }
 ```
-### 2.2 加入切面注解
+#### 2.2 加入切面注解
 在 src/main/resources/META-INF/aspect/fast.aspect.supports.txt 加入 LogAccess 注解全路径
 
 ```java
@@ -79,7 +65,7 @@ public class LogHandler implements FastAspectHandler {
 org.fastlight.fastaop.example.handler.LogAccess
 ```
 
-## 三、使用切面
+### 三、使用切面
 
 ```java
 
@@ -119,15 +105,13 @@ FastAspectContext#getMetaMethod()
 | method         | 反射获取的方法信息，有缓存仅静态初始化的时候执行反射 |
 | metaExtensions | 元数据扩展，生命周期为全局，仅在当前 Method 可见     |
 
-
-
 ## 原理
 
 通过在编译的时候拦截「注解处理」过程，对标记的方法和类注入切入代码，其核心代码为：
 
 ```java
  if (__fast_context.support()) {
-        __fast_context.invoke(new Object[0]);
+     __fast_context.invoke(new Object[0]);
  }
 ```
 
@@ -152,7 +136,7 @@ public class AopExample {
       // 2. 调用切面逻辑 
       if (__fast_context.support()) {
             __fast_context.invoke(new Object[0]);
-        	  return;
+            return;
          }
       // 3. ctx.proceed() 会回调原始逻辑
       System.out.println("[FastAop Hello]");
