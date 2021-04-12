@@ -117,7 +117,12 @@ public class FastAspectSpiHandler implements FastAspectHandler {
     public boolean support(MetaMethod metaMethod) {
         List<Integer> supportIndices = getSupportIndices(metaMethod);
         // 当前方法有支持的切面逻辑且线程标识为调用下一个切面逻辑
-        return supportIndices.size() > 0 && metaMethod.getInvokeMethodType() == InvokeMethodType.AOP;
+        boolean support = supportIndices.size() > 0 && metaMethod.getInvokeMethodType() == InvokeMethodType.AOP;
+        // 递归调用也支持切面
+        if (!support) {
+            metaMethod.setInvokeMethodType(InvokeMethodType.AOP);
+        }
+        return support;
     }
 
     /**

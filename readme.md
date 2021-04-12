@@ -16,9 +16,9 @@ Java 高性能 AOP 框架
 
 ## 框架简介
 
-FastAop 是一款基于 Java Annotation Processing 的 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树并织入切面代码从而实现了 AOP 的功能。
+FastAop 是一款基于 Java Annotation Processing 的轻量级 AOP 框架，其原理和 Lombok 类似，通过对编译过程的拦截，修改方法的语法树并织入切面代码从而实现了 AOP 的功能。
 
-> FastAop 对运行时无要求，无须 Spring，AspectJ，CGLib 等特殊依赖，默认支持 static/private/protected 等方法切入，同属一个类的方法之间调用也会过切面逻辑
+> FastAop 对运行时无要求，无须 Spring，AspectJ，CGLib 等特殊依赖。
 
 ## 使用
 

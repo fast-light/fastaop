@@ -1,1 +1,2 @@
 org.fastlight.fastaop.example.CustomDefinedTest.LogAccess
+org.fastlight.fastaop.example.RecursionTest.TimeCount
