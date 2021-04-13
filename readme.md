@@ -5,9 +5,11 @@
 <br/>
 
 <div align=center>
-<img src="https://img.shields.io/badge/licenes-MIT-brightgreen.svg"/>
-<img src="https://img.shields.io/badge/jdk-1.8-brightgreen.svg"/>
-<img src="https://img.shields.io/badge/release-master-brightgreen.svg"/>
+  <img src="https://img.shields.io/badge/licenes-MIT-blue.svg"/>
+  <img src="https://img.shields.io/badge/jdk-1.8-green.svg"/>
+  <a href="https://mvnrepository.com/artifact/org.fastlight/fastaop">
+      <img src="https://img.shields.io/badge/release-1.0.1-brightgreen.svg"/>
+  </a>
 </div>
 <div align=center style="margin:10px 0px 10px 0px">
 Java light AOP framework

@@ -1,14 +1,16 @@
 <div align=center>
 <img width="200px;" src="http://pan.sudoyc.com:7878/apps/files_sharing/publicpreview/zsW4eHSPx9DKt8P?x=3710&y=1192&a=true&file=logo.png&scalingup=0"/>
 </div>
-
 <br/>
 
 <div align=center>
-<img src="https://img.shields.io/badge/licenes-MIT-brightgreen.svg"/>
-<img src="https://img.shields.io/badge/jdk-1.8-brightgreen.svg"/>
-<img src="https://img.shields.io/badge/release-master-brightgreen.svg"/>
+  <img src="https://img.shields.io/badge/licenes-MIT-blue.svg"/>
+  <img src="https://img.shields.io/badge/jdk-1.8-green.svg"/>
+  <a href="https://mvnrepository.com/artifact/org.fastlight/fastaop">
+      <img src="https://img.shields.io/badge/release-1.0.1-brightgreen.svg"/>
+  </a>
 </div>
+
 <div align=center>
 Java 轻量级 AOP 框架
 </div>
