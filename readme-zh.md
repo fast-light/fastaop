@@ -14,7 +14,7 @@ Java 轻量级 AOP 框架
 </div>
 
 <div align=center>
-  <span><a href="/readme-zh.md" style="margin-right:20px">中文文档</a><a href="/">English Document</a></span>
+  <span><a href="/readme-zh.md">中文文档</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/readme.md">English</a></span>
 </div>
 
 
