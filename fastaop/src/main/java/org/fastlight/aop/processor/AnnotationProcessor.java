@@ -4,12 +4,15 @@ import com.google.auto.service.AutoService;
 import com.google.common.collect.Lists;
 import org.fastlight.apt.processor.BaseAnnotationProcessor;
 import org.fastlight.apt.processor.BaseFastProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import java.util.List;
+import org.fastlight.aop.util.BannerLogger;
+
 
 /**
  * 注解处理的总入口，java 编译器有个优化，同一个元素只会经过一个 processor，所以这里遍历所有元素并给所有处理器执行
@@ -31,5 +34,11 @@ public class AnnotationProcessor extends BaseAnnotationProcessor {
     @Override
     protected List<? extends BaseFastProcessor<?>> getProcessors() {
         return processors;
+    }
+
+     @Override
+    public synchronized void init(ProcessingEnvironment environment) {
+        BannerLogger.printBanner();
+        super.init(environment);
     }
 }
