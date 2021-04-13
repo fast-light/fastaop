@@ -6,7 +6,7 @@
 <div align=center>
   <img src="https://img.shields.io/badge/licenes-MIT-blue.svg"/>
   <img src="https://img.shields.io/badge/jdk-1.8-green.svg"/>
-  <a href="https://mvnrepository.com/artifact/org.fastlight/fastaop">
+  <a href="https://mvnrepository.com/artifact/org.fastlight/fastaop" target="_blank">
       <img src="https://img.shields.io/badge/release-1.0.1-brightgreen.svg"/>
   </a>
 </div>
