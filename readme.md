@@ -25,7 +25,7 @@ A lightweight AOP framework based on Java Annotation Processing, Its principle i
 ## Features
 
 - 📦 Out of the box, compatible with any project
-- 🚀 Based on Java Annotation Processing, high-performance & extensible
+- 🚀 Based on Java Annotation Processing, high-performance
 - ⚡️ Suitable for arbitrary modifiers methods, like private,protected,static etc..
 
 ## Guide
