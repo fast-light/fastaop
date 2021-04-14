@@ -30,7 +30,7 @@ A lightweight AOP framework based on Java Annotation Processing, Its principle i
 
 ## Guide
 
-  please visit [FastAop Guide](http://doc.fastlight.org:7878).
+  please visit [FastAop Guide](http://fastlight.org).
 
 ## Development
 
