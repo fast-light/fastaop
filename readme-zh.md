@@ -32,7 +32,7 @@ FastAop 是一款基于 Java Annotation Processing 的轻量级 AOP 框架，其
 
 ## 使用
 
- [FastAop 使用教程](http://doc.fastlight.org:7878/zh-CN).
+ [FastAop 使用教程](http://fastlight.org/zh-CN).
 
 ## 编译项目
 
