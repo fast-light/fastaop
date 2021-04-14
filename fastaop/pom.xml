@@ -12,7 +12,7 @@
 
     <artifactId>fastaop</artifactId>
 
-    <name>fastapt</name>
+    <name>fastaop</name>
     <description>java fast aop framework</description>
     <url>https://github.com/fast-light/fastaop</url>
 
