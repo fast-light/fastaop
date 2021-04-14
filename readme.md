@@ -12,7 +12,7 @@
   </a>
 </div>
 <div align=center style="margin:10px 0px 10px 0px">
-Java light AOP framework
+Java lightweight AOP framework
 </div>
 <div align=center >
   <span><a href="/readme-zh.md">中文文档</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/readme.md">English</a></span>
