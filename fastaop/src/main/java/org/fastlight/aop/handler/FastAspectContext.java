@@ -223,6 +223,7 @@ public class FastAspectContext {
         ctx.args = args;
         ctx.metaMethod = metaMethod;
         ctx.owner = owner;
+        ctx.extensions = extensions;
         return ctx;
     }
 
