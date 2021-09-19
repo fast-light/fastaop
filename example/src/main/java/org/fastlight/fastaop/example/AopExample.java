@@ -1,5 +1,7 @@
 package org.fastlight.fastaop.example;
 
+import org.fastlight.aop.annotation.FastAspectVar;
+import org.fastlight.aop.handler.FastAspectContext;
 import org.fastlight.fastaop.example.handler.LogAccess;
 
 /**
@@ -11,6 +13,8 @@ import org.fastlight.fastaop.example.handler.LogAccess;
 public class AopExample {
     @LogAccess
     public static void main(String[] args) {
+        @FastAspectVar FastAspectContext context = FastAspectContext.currentContext();
+        System.out.println(context.toString());
         System.out.println("[FastAop Hello]");
     }
 }
